@@ -6,7 +6,7 @@ description: |
   Listen beneath a field of orbiting stars. The sky responds to rhythmic attacks, sustained frequency energy, quiet detail and recurring spectral patterns, with stable paths when you seek.
   The core includes reusable audio analysis, a replaceable timeline and controls, text/GIF comments, timed moments and star-cursor presence. Local listening works without a relay. Multiplayer uses an explicitly configured signalling service and WebRTC data channels.
 category: Music
-version: 1.1.0
+version: 1.1.1
 license: MIT
 author:
   name: xi

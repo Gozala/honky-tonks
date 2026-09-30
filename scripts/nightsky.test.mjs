@@ -88,8 +88,11 @@ test('workspace room handles empty, selected, switched and cleared tracks indepe
   assert.equal(add, true, 'add action opens this workspace song editor');
   room.listeners.get('nightsky-songs')({ detail: { add: false } });
   assert.equal(add, false, 'Songs action opens the same editor for switching tracks');
+  room.listeners.get('nightsky-remix')();
+  assert.equal(add, undefined, 'copy action opens this workspace remix panel');
   room.disconnectedCallback();
   assert.equal(room.listeners.has('nightsky-songs'), false, 'song listener cleans up on disconnect');
+  assert.equal(room.listeners.has('nightsky-remix'), false, 'remix listener cleans up on disconnect');
   assert.equal(room._observer.connected, false);
   room.connectedCallback();
   assert.equal(room.children.length, 2, 'reconnection does not duplicate the room');
