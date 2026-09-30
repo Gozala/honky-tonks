@@ -5089,9 +5089,9 @@ view!:
     label: |
       {title}
     directory: |
-      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}.nightsky-intro:has(nightsky-player) .nightsky-empty{display:none}</style><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><tonk-display entity="{this}" model="nightsky-active-track" with="{dom.host/with}"></tonk-display></section>
+      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}.nightsky-intro:has(nightsky-player) .nightsky-empty{display:none}</style><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><nightsky-workspace-room workspace="{this}" with="{dom.host/with}"><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display></nightsky-workspace-room></section>
     ui: |
-      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}.nightsky-intro:has(nightsky-player) .nightsky-empty{display:none}</style><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><tonk-display entity="{this}" model="nightsky-active-track" with="{dom.host/with}"></tonk-display></section>
+      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}.nightsky-intro:has(nightsky-player) .nightsky-empty{display:none}</style><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><nightsky-workspace-room workspace="{this}" with="{dom.host/with}"><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display></nightsky-workspace-room></section>
 
 nightsky!: &nightsky-app
   title: "Nightsky"
@@ -5378,6 +5378,32 @@ component!: &nightsky-song-editor
         }
       }
 
+      // Query selections as a directory: a workspace without a pointer is valid.
+      // Only the matching workspace row may mount a listening room.
+      class WorkspaceRoom extends HTMLElement {
+        static get observedAttributes() { return ['workspace','with']; }
+        connectedCallback() {
+          if (!this._room) {
+            this._empty = document.createElement('p'); this._empty.className = 'nightsky-empty';
+            this._empty.textContent = 'No song selected. Use Make your own copy to add a recording, or prepare the optional demo.';
+            this._room = document.createElement('nightsky-active-room');
+            this.append(this._empty, this._room);
+          }
+          this._observer ||= new MutationObserver(() => this.read());
+          this._observer.observe(this, {childList:true, subtree:true, attributes:true, attributeFilter:['data-workspace','data-track']});
+          this.read();
+        }
+        disconnectedCallback() { this._observer?.disconnect(); }
+        attributeChangedCallback() { if (this.isConnected && this._room) this.read(); }
+        read() {
+          const workspace = this.getAttribute('workspace'), scope = this.getAttribute('with') || '';
+          const track = [...this.querySelectorAll('.nightsky-current-selection')].find(row => row.dataset.workspace === workspace && validEntity(row.dataset.track))?.dataset.track || '';
+          if (this._room.getAttribute('with') !== scope) this._room.setAttribute('with', scope);
+          if (this._room.getAttribute('track') !== track) this._room.setAttribute('track', track);
+          this._empty.hidden = !!track;
+        }
+      }
+
       class SharedListeningSetup extends HTMLElement {
         static get observedAttributes() { return ['with','workspace']; }
         connectedCallback() {
@@ -5514,6 +5540,7 @@ component!: &nightsky-song-editor
           finally{await decoder?.close?.().catch(()=>{});}
         }
       }
+      customElements.get('nightsky-workspace-room')||customElements.define('nightsky-workspace-room',WorkspaceRoom);
       customElements.get('nightsky-active-room')||customElements.define('nightsky-active-room',ActiveRoom);
       customElements.get('nightsky-song-editor')||customElements.define('nightsky-song-editor',SongEditor);
       customElements.get('nightsky-shared-setup')||customElements.define('nightsky-shared-setup',SharedListeningSetup);
