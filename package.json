@@ -11,7 +11,7 @@
     "prepare:catalog": "node scripts/prepare.mjs",
     "prebuild": "npm run prepare:catalog",
     "build": "vinext build && node scripts/normalize-output.mjs && node scripts/check-output.mjs",
-    "test": "node --test scripts/catalog.test.mjs",
+    "test": "node --test scripts/catalog.test.mjs scripts/nightsky.test.mjs",
     "typecheck": "npm run prepare:catalog && tsc --noEmit",
     "start": "vinext start",
     "lint": "oxlint",

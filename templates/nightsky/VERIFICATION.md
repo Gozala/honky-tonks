@@ -51,3 +51,9 @@ The final user-reviewed starter was checked in a freshly opened native demo: the
 The approved timeline cursor changes only the local pointer over an enabled timeline: a 1 px × 32 px glowing line replaces the star. The WebRTC cursor packet format is unchanged. Cursor, UI, nested-shadow seek, canvas, installer-protection and real WebRTC regression harnesses pass. A browser running the public namespaced components verified direct range selection and click-to-seek. After guarded publication, a fresh native invite loaded the timeline marker and matching cursor styles; all other components and application data were preserved. This fresh native check did not repeat two-browser playback.
 
 The submission pass changes documentation and the hashes of its carried documentation bundle only. Listening component bytes, prepared assets and native guide/prompt remain those already reviewed.
+
+## Empty workspace selection — 30 September 2026
+
+The workspace now queries existing `nightsky-active-track` selection rows in directory mode instead of requiring that concept on a workspace with no active pointer. The workspace-room component selects only its own row, shows an empty-state message until selection and removes the previous room when selection changes or clears.
+
+CLI 0.6.14 installed the edited core in a disposable local space. Headless rendering passed with no active pointer and with two independent workspace selections. The catalog test fixture now creates its own small manifest, passive preview and repeated-head notation, so validation tests do not depend on a bundled Starter space. All seven catalog/selection tests pass, including empty, other-workspace, selected, switched, cleared, invalid and reconnect states. The selection component tests execute the shipped class source with a minimal DOM harness; headless rendering does not execute custom elements. No browser or audio playback acceptance was repeated for this change.
