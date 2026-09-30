@@ -80,12 +80,24 @@ const assert = require('node:assert/strict');
     await settle();
     assert.equal(await p.locator('tonk-prose li').count(), 2);
     await seed('9. Alpha\n10. Bravo\n11. Charlie');
-    await e.press('ArrowUp');
-    await e.press('End');
+    await p.evaluate(() => {
+      const v = window.view;
+      let end;
+      v.state.doc.descendants((node, pos) => {
+        if (node.isTextblock && node.textContent.includes('Bravo'))
+          end = pos + 1 + node.content.size;
+      });
+      v.dispatch(
+        v.state.tr.setSelection(
+          v.state.selection.constructor.create(v.state.doc, end),
+        ),
+      );
+      v.focus();
+    });
     await e.press('Enter');
     await e.pressSequentially('Inserted');
     await settle();
-    assert.match(await value(), /1[01]\. Inserted/);
+    assert.match(await value(), /11\. Inserted/);
     assert.equal(await p.locator('tonk-prose li').count(), 4);
     assert.match(await value(), /12\. Charlie/);
     await caret();

@@ -1311,7 +1311,7 @@ writer-app!:
       .md-doc h1:first-child,.md-doc h2:first-child,.md-doc h3:first-child{margin-top:0}
       .md-doc ul,.md-doc ol{margin-bottom:1em}
       .md-doc blockquote{color:var(--tonk-prose-blockquote);border-left:3px solid #d2d2d2;margin-left:0;padding-left:1em}
-      .md-doc li:has(>.md-active){list-style:inherit}
+      .md-doc li:has(>.md-active){list-style:none}
       .md-doc li:has(>.md-active)>.md-active .md-task-checkbox{display:inline-block}
       .md-doc code,.md-doc pre{font-family:var(--tonk-prose-mono);font-size:.92em}
       .tonk-prose-empty::before{font-style:normal;font-size:1em}

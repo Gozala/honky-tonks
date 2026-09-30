@@ -19,3 +19,5 @@ The browser suite checks real keyboard/pointer interactions, including focus cha
 List prefixes stay visible as editable Markdown (`1. `, `- `) at normal font size, including while unfocused. This intentionally avoids exchanging source text for native markers as focus moves. The Enter command preserves prefixes across ProseMirror splits and the source reparser.
 
 This changes no document data or autosave behavior. LittleWriter already schedules its own saves; the marketing dashboard's asset autosave is application-specific.
+
+The suite also loads the full LittleWriter 2.0 template inside a restricted iframe with an in-memory Tonk bridge. It verifies the editor against the application CSS, saves document edits, and exercises the Users and Chat UI without touching any real space. The application focus rule keeps native list markers disabled so it does not duplicate the editable source prefixes.
