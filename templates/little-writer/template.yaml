@@ -6,7 +6,7 @@ description: |
   little writer is a shared Markdown editor styled after Etherpad. Write in iA Writer Duo with a formatting toolbar, line numbers in the margin and authorship colors behind every author's text. Open the users list to set your name and color, chat beside the document, save revisions and scrub through them with the timeslider, and import or export Markdown, plain text or HTML.
   Comments anchor to passages and live in a sidebar with open, resolved and label tabs. Your agent can leave and answer them, because documents, comments, chat and revisions are ordinary Tonk data. Documents sit in a drawer with folders, sorting, rename, reveal and delete; the drawer heading takes the space name.
 category: Writing
-version: 2.0.0
+version: 2.0.1
 license: MIT
 author:
   name: Goblin Oats
