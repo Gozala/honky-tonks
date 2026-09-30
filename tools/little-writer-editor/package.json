@@ -1,0 +1,29 @@
+{
+  "name": "little-writer-editor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test.cjs && node test-app.cjs"
+  },
+  "dependencies": {
+    "markdown-it": "14.3.0",
+    "markdown-it-mark": "4.0.0",
+    "prosemirror-commands": "1.7.1",
+    "prosemirror-dropcursor": "1.8.3",
+    "prosemirror-gapcursor": "1.4.1",
+    "prosemirror-history": "1.5.0",
+    "prosemirror-inputrules": "1.5.1",
+    "prosemirror-keymap": "1.2.3",
+    "prosemirror-markdown": "1.13.5",
+    "prosemirror-model": "1.25.11",
+    "prosemirror-schema-list": "1.5.1",
+    "prosemirror-state": "1.4.4",
+    "prosemirror-transform": "1.12.0",
+    "prosemirror-view": "1.42.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2",
+    "playwright": "1.59.1"
+  }
+}

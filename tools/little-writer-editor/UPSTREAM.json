@@ -1,0 +1,24 @@
+{
+  "origin": "/Users/goblin/Workspace/tonk/rust/tonk-prose",
+  "description": "Source snapshot extracted from the Tonk Prose bundles used by Writer before the stability fixes. Local patches are applied to this snapshot.",
+  "sha256": {
+    "tonk-prose.js": "c85f67ff43b4c12494a0397716f6656674c68ee270c74a5c26ce5de202a2cf3b",
+    "tonk-prose-editor.js": "b4422253a2d9b3fc9b2d7460663bdace197625f6d3801f4ba859aac5c8365c61"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0",
+    "markdown-it-mark": "4.0.0",
+    "prosemirror-commands": "^1.6.0",
+    "prosemirror-dropcursor": "^1.8.1",
+    "prosemirror-gapcursor": "^1.3.2",
+    "prosemirror-history": "^1.4.1",
+    "prosemirror-inputrules": "^1.4.0",
+    "prosemirror-keymap": "^1.2.2",
+    "prosemirror-markdown": "^1.13.1",
+    "prosemirror-model": "^1.22.3",
+    "prosemirror-schema-list": "^1.4.1",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-transform": "^1.10.0",
+    "prosemirror-view": "^1.34.3"
+  }
+}

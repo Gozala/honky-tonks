@@ -33,9 +33,26 @@ jobs:
         if: github.event_name != 'pull_request'
         with:
           path: dist/client
+  editor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/little-writer-editor
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tools/little-writer-editor/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: git diff --exit-code -- ../../templates/little-writer/app.yaml
+      - run: npm test
   deploy:
     if: github.event_name != 'pull_request'
-    needs: build
+    needs: [build, editor]
     runs-on: ubuntu-latest
     permissions:
       pages: write
