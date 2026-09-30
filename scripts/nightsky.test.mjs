@@ -6,9 +6,9 @@ import vm from 'node:vm';
 const source = await readFile(new URL('../templates/nightsky/core.yaml', import.meta.url), 'utf8');
 
 test('workspace views query existing selections without requiring an active track', () => {
-  const view = source.slice(source.indexOf('view!:\n  this: nightsky\n'), source.indexOf('nightsky!: &nightsky-app'));
+  const view = source.split(/(?=^[a-z][a-z0-9./+!-]*!:\s*)/m).find(block => block.startsWith('view!:\n  this: nightsky\n'));
   const selections = [...view.matchAll(/<tonk-display\b[^>]*model="nightsky-active-track"[^>]*>/g)];
-  assert.equal(selections.length, 2, 'both directory and detail views query selections');
+  assert.equal(selections.length, 4, 'room and song editor query selections in both views');
   for (const [display] of selections) {
     assert.ok(!display.includes('entity='), 'directory mode tolerates an absent selection');
     assert.ok(display.includes('view="selection"'));
@@ -24,7 +24,12 @@ test('workspace room handles empty, selected, switched and cleared tracks indepe
       this.attrs.set(name, value);
       if (this.constructor.observedAttributes?.includes(name)) this.attributeChangedCallback();
     }
-    append(...elements) { this.children.push(...elements); }
+    append(...elements) { for (const element of elements) { element.parent = this; element.isConnected = this.isConnected; this.children.push(element); } }
+    remove() { this.parent.children = this.parent.children.filter(child => child !== this); this.parent = null; this.isConnected = false; }
+    querySelector(selector) { if (selector === 'nightsky-player') return this.player ||= new Element(); return null; }
+    closest() { return this.intro; }
+    addEventListener(type, handler) { this.listeners ||= new Map(); this.listeners.set(type, handler); }
+    removeEventListener(type) { this.listeners.delete(type); }
     replaceChildren() { this.children = []; }
     querySelectorAll() { return this.rows || []; }
   }
@@ -45,6 +50,7 @@ test('workspace room handles empty, selected, switched and cleared tracks indepe
   room.setAttribute('with', 'test-scope');
   room.connectedCallback();
   assert.equal(room._empty.hidden, false);
+  assert.ok(room._empty.innerHTML.includes('<nightsky-player empty>'));
   assert.equal(room._room.children.length, 0);
 
   const selection = (workspace, track) => ({ dataset: { workspace, track } });
@@ -55,6 +61,7 @@ test('workspace room handles empty, selected, switched and cleared tracks indepe
   room.rows.push(selection('id:workspace', 'id:first-track'));
   room._observer.callback();
   assert.equal(room._empty.hidden, true);
+  assert.equal(room._empty.isConnected, false, 'idle player disconnects after selection');
   assert.equal(room._room.children.length, 1);
   assert.equal(room._room.children[0].getAttribute('entity'), 'id:first-track');
   const player = room._room.children[0];
@@ -75,7 +82,14 @@ test('workspace room handles empty, selected, switched and cleared tracks indepe
   room.rows = [selection('id:other-workspace', '_')];
   room._observer.callback();
   assert.equal(room._room.children.length, 0, 'unbound values never mount a player');
+  let add;
+  room.intro = { querySelector: () => ({ openPanel: value => { add = value; } }) };
+  room.listeners.get('nightsky-songs')({ detail: { add: true } });
+  assert.equal(add, true, 'add action opens this workspace song editor');
+  room.listeners.get('nightsky-songs')({ detail: { add: false } });
+  assert.equal(add, false, 'Songs action opens the same editor for switching tracks');
   room.disconnectedCallback();
+  assert.equal(room.listeners.has('nightsky-songs'), false, 'song listener cleans up on disconnect');
   assert.equal(room._observer.connected, false);
   room.connectedCallback();
   assert.equal(room.children.length, 2, 'reconnection does not duplicate the room');

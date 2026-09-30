@@ -2272,7 +2272,7 @@ component!: &nightsky-scrubber
         const tick = e => { const previous = this.duration(); this.receiveTick(e.detail); this.draw(); if (this.duration() !== previous) this.pins(); };
         const loaded = e => { const previous = this.duration(); this._loaded = e.detail; if (this.duration() !== previous) this.cancel();this._selection=this.normalizeSelection(this._selection)||null;this.draw();this.pins(); };
         const marks = e => { this._marks = e.detail; this.pins(); };
-        const ui = e => { this._ui = e.detail; if (!this.canSeek()) this.cancel(); this.draw(); };
+        const ui = e => { this._ui = e.detail; this.shadowRoot.querySelector('.helper').textContent = this._ui?.empty ? 'Add a song to start listening' : 'Click to seek · Drag to comment on a range'; if (!this.canSeek()) this.cancel(); this.draw(); };
         const identity = () => { if (!this.canSeek()) this.cancel(); this.draw(); };
         const state = e => this.accept(e.detail);
         const selection=e=>{const next=this.normalizeSelection(e.detail);if(next!==undefined){this._selection=next;this.draw();}};
@@ -2684,7 +2684,7 @@ component!: &nightsky-player
       connect() {
         if (!this._built) this.build();
         this._dead = false;
-        for (const other of songPlayers) if (other !== this && other.getAttribute('audio') === this.getAttribute('audio')) other.retire();
+        for (const other of songPlayers) if (other !== this && this.attr('audio') && other.getAttribute('audio') === this.getAttribute('audio')) other.retire();
         songPlayers.add(this);
         this._section = this.section();
         globalThis.Nightsky?.room(this);
@@ -2811,7 +2811,7 @@ component!: &nightsky-player
         const status = this.$('.status');
         const c = this.url(this.attr('cover'));
         if (c && this._coverUrl !== c) { this._coverUrl = c; songImage(c).then(o => { if (this._dead || this._coverUrl !== c) return; const img = this.$('.cover'); img.src = o; img.hidden = false; }).catch(() => {}); }
-        if (!full && !small) { status.textContent = 'Waiting for the track…'; return; }
+        if (!full && !small) { status.textContent = this.hasAttribute('empty') ? '' : 'Waiting for the track…'; return; }
         const order = [full, small]; // Prefer the same lossless waveform on every speaker.
         const key = order.filter(Boolean).join('|');
         if (this._loadedUrl === key) return;
@@ -3061,12 +3061,15 @@ component!: &nightsky-player
           if (setup.textContent !== rooms) setup.textContent = rooms || 'Add a track to see its room ID.';
         }
         if (!this._built) return;
-        this.$('.title').textContent = this.attr('title');
-        this.$('.artist').textContent = this.attr('artist');
+        const empty = this.hasAttribute('empty');
+        this.$('.add-song').hidden = !empty;
+        this.$('.songs').hidden = !this.closest('nightsky-workspace-room');
+        this.$('.title').textContent = empty ? 'Your next song' : this.attr('title');
+        this.$('.artist').textContent = empty ? 'Add a recording to begin' : this.attr('artist');
         const album = this.attr('album'), year = this.attr('year');
         this.$('.album').textContent = album + (album && year ? ' · ' : '') + year;
         const hint=this.$('.hint'),live=this._liveText||'',peers=/^live: (\d+) peers?$/.exec(live);
-        hint.hidden=!songMe.joined;
+        hint.hidden=empty||!songMe.joined;
         hint.textContent=peers ? `Listening with ${peers[1]} ${peers[1]==='1'?'other':'others'}` : ({
           'ready for friends':'Ready when you are',
           'aligning speakers…':'Syncing playback…',
@@ -3078,11 +3081,11 @@ component!: &nightsky-player
         }[live]||live||'Getting the room ready…');
         const who = this.$('.who');
         if (!this._renaming) who.textContent = songMe.name;
-        this.$('.you').hidden = !songMe.joined;
-        this.$('.join').hidden = !!songMe.joined;
-        this.toggleAttribute('data-joining', !songMe.joined);
-        this.$('.moments').hidden = !songMe.joined;
-        this.emit('nightsky-ui', { ready: !!this._buffer, joined: !!songMe.joined, playing: !!this._src, title: this.attr('title'), artist: this.attr('artist'), status: this._liveText || '' });
+        this.$('.you').hidden = empty || !songMe.joined;
+        this.$('.join').hidden = empty || !!songMe.joined;
+        this.toggleAttribute('data-joining', !empty && !songMe.joined);
+        this.$('.moments').hidden = empty || !songMe.joined;
+        this.emit('nightsky-ui', { empty, ready: !!this._buffer, joined: !!songMe.joined, playing: !!this._src, title: this.attr('title'), artist: this.attr('artist'), status: this._liveText || '' });
         this.tellPerson();
       }
 
@@ -3094,12 +3097,15 @@ component!: &nightsky-player
           :host{all:initial;cursor:var(--nightsky-cursor,auto);display:block;position:relative;height:100%;min-height:inherit;color:#f1f0ff;font:400 16px/1.5 'Inter','SF Pro Text','Segoe UI',system-ui,sans-serif;color-scheme:dark;pointer-events:none}*,*::before,*::after{box-sizing:border-box;cursor:var(--nightsky-cursor,inherit)}::slotted(*){display:none}button,input{font:inherit;color:inherit}button{cursor:var(--nightsky-cursor,pointer)}button:focus-visible,input:focus-visible,summary:focus-visible,.who:focus-visible{outline:2px solid #c4b5ff;outline-offset:4px}[hidden]{display:none!important}p,h1{margin:0}.topbar{position:absolute;top:26px;left:32px;right:32px;display:flex;align-items:flex-start;justify-content:flex-end;gap:20px}.room-info{text-align:right;font-size:13px;color:#bdc1df}.hint{font-size:13px;color:#b3bdc9}.you{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:4px;pointer-events:auto}.who{color:#f3efff;font-size:14px;border-bottom:1px dashed #a49bd775;max-width:180px;min-width:20px;overflow-wrap:anywhere}.layout{height:100%;min-height:inherit;display:flex;flex-direction:column;padding:110px 32px 42px;gap:24px}.arrival{flex:1;min-height:224px;display:flex;align-items:center;justify-content:center}.footer{width:100%;max-width:880px;margin:0 auto;pointer-events:auto;flex:none;position:relative}.moments{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);width:100%;max-width:520px;padding-bottom:22px;pointer-events:none}.moments nightsky-moments{pointer-events:auto}.intro{display:flex;align-items:center;gap:18px;min-width:0;text-shadow:0 1px 4px #000,0 2px 16px #000}.cover{height:72px;width:72px;object-fit:cover;border-radius:4px;box-shadow:0 4px 16px #0008,0 0 0 1px #ffffff20;flex:none}.meta{min-width:0}.title{font-size:clamp(20px,2.2vw,25px);font-weight:570;line-height:1.2;letter-spacing:-.035em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f2f0ff}.artist{font-size:15px;margin-top:7px;color:#d9dfe2}.album{font-size:12px;color:#d3d9de;margin-top:4px}.status{font-size:13px;color:#c3c7e6;margin:0 0 10px 5px;text-shadow:0 2px 8px #060817}
           .meta,.room-info,.status{text-shadow:0 0 2px #020306,1px 0 2px #020306,-1px 0 2px #020306,0 1px 2px #020306,0 -1px 2px #020306,0 0 9px #020306}.who{border-bottom-style:solid;border-bottom-color:#dfd6bd45;transition:border-color .18s}.who:hover,.who:focus{border-bottom-color:#ece4c4}.status:empty{display:none}button:focus-visible,input:focus-visible,summary:focus-visible,.who:focus-visible{outline-color:#ece4c4}
           .join{width:min(380px,100%);flex:none;padding:18px 0;background:transparent;border:0;border-radius:0;box-shadow:none;pointer-events:auto;text-shadow:0 1px 5px #000,0 2px 18px #000}.join h2{margin:0 0 10px;font-size:clamp(30px,3.5vw,40px);line-height:1.12;font-weight:500;letter-spacing:-.05em;color:#f3eee2}.join p{font-size:14px;line-height:1.65;color:#bdc4c9;margin:0 0 28px}.join label{display:block;font-size:12px;color:#b4bec5;margin-bottom:2px}.join-row{display:flex;gap:20px;align-items:center;border-bottom:1px solid #d7d4c66b;transition:border-color .2s,box-shadow .2s}.join-row:focus-within{border-bottom-color:#eee5ce;box-shadow:0 1px 0 #eee5ce}.join-name{flex:1;width:100%;min-width:0;background:transparent;border:0;border-radius:0;padding:13px 0;min-height:52px;font-size:17px;color:#f6f0e2;text-shadow:inherit;caret-color:#f1e7ca}.join-name:focus-visible{outline:none}.join-name::placeholder{color:#a4aeb6;opacity:1}.join-button{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:none;min-height:48px;min-width:78px;border:0;border-radius:0;background:transparent;color:#f1e8d4;padding:12px 0 12px 8px;font-size:15px;font-weight:500;text-shadow:inherit}.join-arrow{display:inline-block;transition:transform .2s cubic-bezier(.2,1.3,.4,1)}.join-button:hover{color:#fff7e2}.join-button:hover .join-arrow{transform:translate(2px,-2px)}.join-button:active .join-arrow{transform:translate(1px,-1px)}.join-error{margin:10px 0 0!important;color:#f1bcb0!important;font-size:13px!important}.join-error:empty{display:none}::selection{background:#e4d9bd;color:#161820}
+          .songs{pointer-events:auto;min-height:44px;padding:8px 14px;border:1px solid #dfd6bd45;border-radius:6px;background:#04070d55;color:#f1e8d4;font-size:14px}.songs:hover{border-color:#ece4c4}.add-song{pointer-events:auto;width:min(380px,100%);text-shadow:0 1px 5px #000,0 2px 18px #000}.add-song h2{margin:0 0 10px;font-size:clamp(30px,3.5vw,40px);line-height:1.12;font-weight:500;letter-spacing:-.05em;color:#f3eee2}.add-song p{font-size:14px;line-height:1.65;color:#bdc4c9;margin-bottom:24px}.add-song-button{display:flex;gap:18px;align-items:center;min-height:48px;padding:12px 0;border:0;border-bottom:1px solid #d7d4c66b;background:transparent;color:#f1e8d4;font-size:17px}.add-song-button:hover{border-color:#eee5ce}
           @media(max-width:560px){.topbar{top:22px;left:20px;right:20px}.layout{padding:110px 16px 22px;gap:24px}.moments{padding-bottom:18px}.intro{gap:11px}.cover{width:48px;height:48px;border-radius:3px}.title{font-size:17px}.artist{font-size:13px;margin-top:5px}.album{font-size:12px}.hint{max-width:165px}.join{width:min(340px,100%);padding:16px 4px}.join h2{font-size:32px}.join-row{gap:16px}.join p{margin-bottom:25px}.room-info{max-width:55%}.you{font-size:12px}}
           @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
-        </style><div class="topbar"><div class="room-info"><div class="you" hidden><span class="who" contenteditable="true" role="textbox" aria-label="Your name, editable" title="Change your name" spellcheck="false"></span></div><p class="hint"></p></div></div>
-        <div class="layout"><div class="arrival"><form class="join" aria-labelledby="join-title" novalidate><h2 id="join-title">Come listen.</h2><p id="join-help">Choose a name to listen together.</p><label for="nightsky-name">Your name</label><div class="join-row"><input class="join-name" id="nightsky-name" name="name" required maxlength="24" autocomplete="nickname" aria-describedby="join-help join-error" placeholder="What should we call you?"><button class="join-button" type="submit">Join <span class="join-arrow" aria-hidden="true">↗</span></button></div><p class="join-error" id="join-error" role="status"></p></form></div>
+        </style><div class="topbar"><button class="songs" type="button" aria-haspopup="dialog">Songs</button><div class="room-info"><div class="you" hidden><span class="who" contenteditable="true" role="textbox" aria-label="Your name, editable" title="Change your name" spellcheck="false"></span></div><p class="hint"></p></div></div>
+        <div class="layout"><div class="arrival"><div class="add-song" hidden><h2>Make room for a song.</h2><p>Add a recording and watch the sky come alive.</p><button class="add-song-button" type="button" aria-haspopup="dialog">Add a song <span aria-hidden="true">↗</span></button></div><form class="join" aria-labelledby="join-title" novalidate><h2 id="join-title">Come listen.</h2><p id="join-help">Choose a name to listen together.</p><label for="nightsky-name">Your name</label><div class="join-row"><input class="join-name" id="nightsky-name" name="name" required maxlength="24" autocomplete="nickname" aria-describedby="join-help join-error" placeholder="What should we call you?"><button class="join-button" type="submit">Join <span class="join-arrow" aria-hidden="true">↗</span></button></div><p class="join-error" id="join-error" role="status"></p></form></div>
         <div class="footer"><div class="moments" hidden><nightsky-moments></nightsky-moments></div><p class="status" role="status"></p><nightsky-deck><div class="intro"><img class="cover" alt="Album cover" hidden><div class="meta"><h1 class="title"></h1><p class="artist"></p><p class="album"></p></div></div></nightsky-deck></div></div>
         <slot></slot>`;
+        this.$('.songs').addEventListener('click', () => this.emit('nightsky-songs', {add:false}));
+        this.$('.add-song-button').addEventListener('click', () => this.emit('nightsky-songs', {add:true}));
         this.$('.join-name').value = songMe.name;
         this.$('.join-name').addEventListener('input',()=>{this.$('.join-error').textContent='';this.$('.join-name').removeAttribute('aria-invalid');});
         this.$('.join').addEventListener('submit', async e => {
@@ -3150,10 +3156,10 @@ component!: &nightsky-player
         const kit = globalThis.Nightsky;
         if (kit && !this.analysis) this.analysis = new kit.Analysis(2048);
         if (this._src && this._analyser) { this._analyser.getByteFrequencyData(this._freq); this._analyser.getByteTimeDomainData(this._wave); }
-        const features = this.analysis?.process(this._freq || [], this._wave || [], songCtx()?.sampleRate || 48000, performance.now(), dt, !!this._src);
+        const ctx = this.hasAttribute('empty') ? null : songCtx();
+        const features = this.analysis?.process(this._freq || [], this._wave || [], ctx?.sampleRate || 48000, performance.now(), dt, !!this._src);
         const dur = this.duration();
         const pos = this.position();
-        const ctx = songCtx();
         if (this._unlocked && ctx && ctx.state !== 'running') { this.stop(); this._unlocked = false; this.meta(); }
         const people = [...this._presence.entries(), ...(songMe.joined ? [[songMe.tag, { name: songMe.name, state: this.myState() }]] : [])].sort((a, b) => a[0].localeCompare(b[0])).map(([tag, p]) => ({ id: tag, tag, name: p.name, state: p.state, me: tag === songMe.tag }));
         this.emit('nightsky-tick', { t: pos, duration: dur, playing: !!this._src, bands: features?.bands || { bass: 0, mid: 0, treble: 0, rms: 0 }, beat: !!features?.beat, features, people, dt, room: this.room() });
@@ -5083,16 +5089,6 @@ concept!: &nightsky
   with:
     title: nightsky-workspace-title
 
-view!:
-  this: nightsky
-  show:
-    label: |
-      {title}
-    directory: |
-      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}.nightsky-intro:has(nightsky-player) .nightsky-empty{display:none}</style><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><nightsky-workspace-room workspace="{this}" with="{dom.host/with}"><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display></nightsky-workspace-room></section>
-    ui: |
-      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}.nightsky-intro:has(nightsky-player) .nightsky-empty{display:none}</style><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><nightsky-workspace-room workspace="{this}" with="{dom.host/with}"><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display></nightsky-workspace-room></section>
-
 nightsky!: &nightsky-app
   title: "Nightsky"
 
@@ -5384,22 +5380,30 @@ component!: &nightsky-song-editor
         static get observedAttributes() { return ['workspace','with']; }
         connectedCallback() {
           if (!this._room) {
-            this._empty = document.createElement('p'); this._empty.className = 'nightsky-empty';
-            this._empty.textContent = 'No song selected. Use Make your own copy to add a recording, or prepare the optional demo.';
+            this._empty = document.createElement('section'); this._empty.className = 'nightsky nightsky-empty-room';
+            this._empty.innerHTML = `<style>.nightsky{cursor:var(--nightsky-cursor,auto);isolation:isolate;position:relative;overflow:clip;background:#04070d;min-width:0;border-radius:14px}.nightsky>nightsky-sky{display:block;position:sticky;inset:auto;top:0;width:100%;height:100svh;margin-bottom:-100svh;z-index:0;pointer-events:none}.nightsky .nightsky-stage{position:relative;isolation:isolate;z-index:1;min-height:620px;height:86svh;max-height:980px;overflow:hidden;background:transparent}.nightsky .nightsky-stage:has(nightsky-player[data-joining]){min-height:740px}.nightsky nightsky-player{position:relative;z-index:2;display:block;height:100%;min-height:inherit}.nightsky nightsky-marks{position:relative;z-index:2}.nightsky .nightsky-data{display:none!important}@media(max-width:560px){.nightsky .nightsky-stage{min-height:620px;height:90svh;max-height:860px}}</style><style>.nightsky-empty-room[hidden]{display:none!important}</style><nightsky-kit></nightsky-kit><nightsky-sky></nightsky-sky><div class="nightsky-stage"><nightsky-player empty></nightsky-player></div>`;
             this._room = document.createElement('nightsky-active-room');
             this.append(this._empty, this._room);
           }
+          this._onSongs ||= event => this.closest('.nightsky-intro')?.querySelector('nightsky-song-editor')?.openPanel(!!event.detail?.add);
+          this.addEventListener('nightsky-songs', this._onSongs);
           this._observer ||= new MutationObserver(() => this.read());
           this._observer.observe(this, {childList:true, subtree:true, attributes:true, attributeFilter:['data-workspace','data-track']});
           this.read();
         }
-        disconnectedCallback() { this._observer?.disconnect(); }
+        disconnectedCallback() { this._observer?.disconnect(); this.removeEventListener('nightsky-songs', this._onSongs); }
         attributeChangedCallback() { if (this.isConnected && this._room) this.read(); }
         read() {
           const workspace = this.getAttribute('workspace'), scope = this.getAttribute('with') || '';
           const track = [...this.querySelectorAll('.nightsky-current-selection')].find(row => row.dataset.workspace === workspace && validEntity(row.dataset.track))?.dataset.track || '';
           if (this._room.getAttribute('with') !== scope) this._room.setAttribute('with', scope);
           if (this._room.getAttribute('track') !== track) this._room.setAttribute('track', track);
+          // Remove the idle player when a real track mounts; reconnect it on clear.
+          const idle = this._empty.querySelector('nightsky-player');
+          if (idle && idle.getAttribute('with') !== scope) idle.setAttribute('with', scope);
+          if (track) {
+            if (this._empty.isConnected) this._empty.remove();
+          } else if (!this._empty.isConnected) this.append(this._empty);
           this._empty.hidden = !!track;
         }
       }
@@ -5455,6 +5459,18 @@ component!: &nightsky-song-editor
       class SongEditor extends HTMLElement {
         connectedCallback() {
           if (!this.shadowRoot) this.attachShadow({mode:'open'}).innerHTML = `<style>:host{display:block;font:400 15px/1.5 system-ui,sans-serif;color:inherit;max-width:780px;margin:12px 0}summary{cursor:pointer;font-weight:600;padding:8px 0}p{margin:8px 0;font-size:14px}form{margin:16px 0}fieldset{border:0;padding:0;margin:0;min-width:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wide{grid-column:1/-1}label{display:grid;gap:5px;font-size:13px}input,select,button{box-sizing:border-box;font:inherit;min-height:42px;max-width:100%;border:1px solid #8793a466;border-radius:5px;color:inherit;background:transparent;padding:8px 10px}input,select{width:100%;min-width:0}input[type=file]{font-size:13px}button,select{cursor:pointer}button:disabled{opacity:.45;cursor:default}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.row select{flex:1;min-width:170px}a{color:inherit;font-size:13px;text-underline-offset:3px}.status{font-size:13px;min-height:1.5em;overflow-wrap:anywhere}:focus-visible{outline:2px solid #80b6dd;outline-offset:3px}[hidden]{display:none!important}@media(max-width:500px){.grid{grid-template-columns:1fr}}</style><details><summary>Song settings</summary><p>Changes here are saved in the space you are viewing. Open an existing song, or add a recording. Each new song keeps its own comments; previous songs remain available here.</p><div class="row"><label style="flex:1">Saved songs<select aria-label="Saved songs"><option value="">No songs yet</option></select></label><button type="button" class="open" disabled>Open song</button></div><div class="row"><a class="download-audio" hidden download>Download audio</a><a class="download-cover" hidden download>Download artwork</a></div><details class="edit-details"><summary>Edit details</summary><form class="edit-form"><div class="grid"><label>Title<input name="edit-title" maxlength="160" required></label><label>Artist<input name="edit-artist" maxlength="160"></label><label>Album<input name="edit-album" maxlength="160"></label><label>Year<input name="edit-year" maxlength="32"></label></div><div class="row"><button type="submit" class="update" disabled>Update details</button></div><p>Changes these details only. Audio and comments stay with this song.</p></form></details><form class="new-song"><fieldset><div class="grid"><label class="wide">Audio file<input name="audio" type="file" accept="audio/*,.flac,.m4a,.ogg,.opus" required></label><label>Title<input name="title" maxlength="160" required placeholder="Song title"></label><label>Artist<input name="artist" maxlength="160" placeholder="Artist or performer"></label><label>Album<input name="album" maxlength="160" placeholder="Optional"></label><label>Year<input name="year" maxlength="32" placeholder="Optional"></label><label class="wide">Artwork — optional<input name="art" type="file" accept="image/png,image/jpeg,image/webp"></label></div><p>Audio up to 32 MiB and 10 minutes. Artwork up to 5 MiB; a simple star cover is included when omitted. Files stay in this Tonk space.</p><div class="row"><button type="submit" class="save">Save as new song</button><button type="button" class="cancel" hidden>Cancel</button></div></fieldset></form><p class="status" role="status" aria-live="polite"></p></details>`;
+          if (this.hasAttribute('panel') && !this._dialog) {
+            const style = document.createElement('style');
+            style.textContent = ':host([panel]){margin:0;max-width:none}:host([panel]) details>summary{display:none}:host([panel]) .edit-details>summary{display:list-item}dialog{box-sizing:border-box;width:min(720px,calc(100vw - 32px));max-height:calc(100svh - 32px);padding:24px;border:1px solid #dfd6bd45;border-radius:14px;background:#090e17;color:#eeeade;color-scheme:dark;font:400 15px/1.5 system-ui,sans-serif;overflow:auto}dialog::backdrop{background:#020306b8;backdrop-filter:blur(8px)}.panel-header{display:flex;align-items:center;justify-content:space-between;gap:16px}.panel-header h2{margin:0;font-size:24px;font-weight:500;letter-spacing:-.035em}.panel-close{min-width:44px;font-size:22px}.panel-header+p{color:#bdc4c9}@media(max-width:500px){dialog{padding:18px}}';
+            const details = this.shadowRoot.querySelector('details'); details.open = true; details.querySelector('p').textContent = 'Add a recording to this space, or open a saved song. Each recording keeps its own comments.';
+            this._dialog = document.createElement('dialog');
+            this._dialog.setAttribute('aria-label', 'Songs');
+            const header = document.createElement('header'); header.className = 'panel-header';
+            const title = document.createElement('h2'); title.textContent = 'Songs';
+            const close = document.createElement('button'); close.type = 'button'; close.className = 'panel-close'; close.textContent = '×'; close.setAttribute('aria-label', 'Close songs');
+            close.addEventListener('click', () => this._dialog.close());
+            header.append(title, close); this._dialog.append(header, details); this.shadowRoot.append(style, this._dialog);
+          }
           this._cache ||= new Map(); this._form = this.shadowRoot.querySelector('form.new-song'); this._editForm=this.shadowRoot.querySelector('.edit-form'); this._editDetails=this.shadowRoot.querySelector('.edit-details'); this._fieldset = this.shadowRoot.querySelector('fieldset'); this._select = this.shadowRoot.querySelector('select'); this._open = this.shadowRoot.querySelector('.open'); this._status = this.shadowRoot.querySelector('.status'); this._cancel = this.shadowRoot.querySelector('.cancel');
           this._onSubmit = event => { event.preventDefault(); this.save(); };
           this._onCancel = () => { this._controller?.abort(); this.status('Cancelling…'); };
@@ -5465,7 +5481,13 @@ component!: &nightsky-song-editor
           this._observer = new MutationObserver(() => { if (this._busy && this._snapshot && !this.unchanged(this._snapshot)) this._controller?.abort(); this.read(); });
           this._observer.observe(this,{subtree:true,childList:true,characterData:true,attributes:true}); this.read();
         }
-        disconnectedCallback() { this._controller?.abort(); this._observer?.disconnect(); this.finishSelection(); clearTimeout(this._confirmation); if(this._fieldset)this.setBusy(false); this._snapshot=null; this._form?.removeEventListener('submit',this._onSubmit); this._editForm?.removeEventListener('submit',this._onEdit); this._editDetails?.removeEventListener('toggle',this._onEditOpen); this._cancel?.removeEventListener('click',this._onCancel); this._open?.removeEventListener('click',this._onOpen); this._select?.removeEventListener('change',this._onSelect); this.field('audio')?.removeEventListener('change',this._onFile); }
+        disconnectedCallback() { this._dialog?.close(); this._controller?.abort(); this._observer?.disconnect(); this.finishSelection(); clearTimeout(this._confirmation); if(this._fieldset)this.setBusy(false); this._snapshot=null; this._form?.removeEventListener('submit',this._onSubmit); this._editForm?.removeEventListener('submit',this._onEdit); this._editDetails?.removeEventListener('toggle',this._onEditOpen); this._cancel?.removeEventListener('click',this._onCancel); this._open?.removeEventListener('click',this._onOpen); this._select?.removeEventListener('change',this._onSelect); this.field('audio')?.removeEventListener('change',this._onFile); }
+        openPanel(add = false) {
+          if (!this._dialog) return;
+          this.read(); this._dialog.querySelector('h2').textContent = add || !this._tracks.length ? 'Add a song' : 'Songs'; this._dialog.setAttribute('aria-label', this._dialog.querySelector('h2').textContent); this._dialog.showModal();
+          if (add || !this._tracks.length) this.field('audio').focus();
+          else this._select.focus();
+        }
         field(name) { return this.shadowRoot?.querySelector('[name="'+name+'"]'); }
         status(text) { this._status.textContent = text; }
         finishSelection(message='') { const pending=this._selectionPending;this._selectionPending=null;clearTimeout(this._selectionConfirmation);if(pending&&this._status?.textContent===pending.message)this.status(message); }
@@ -5474,11 +5496,12 @@ component!: &nightsky-song-editor
           const workspace=this.getAttribute('workspace');
           this._tracks=[...this.querySelectorAll('.nightsky-song-option')].filter(row=>validEntity(row.dataset.track)&&validBlob(row.dataset.audio)&&validBlob(row.dataset.cover)&&Number(row.querySelector('.duration')?.textContent)>0).slice(0,500).map(row=>({id:row.dataset.track,audio:row.dataset.audio,cover:row.dataset.cover,title:row.querySelector('.title')?.textContent.trim()||'Untitled',artist:row.querySelector('.artist')?.textContent.trim()||'',album:row.querySelector('.album')?.textContent.trim()||'',year:row.querySelector('.year')?.textContent.trim()||''}));
           this._active=[...this.querySelectorAll('.nightsky-current-selection')].find(row=>row.dataset.workspace===workspace&&validEntity(row.dataset.track))?.dataset.track||'';
-          if(this._selectionPending){const pending=this._selectionPending;if(pending.workspace!==workspace||pending.scope!==this.getAttribute('with'))this.finishSelection();else if(pending.id===this._active)this.finishSelection(pending.title+' is open. Press Play when you are ready.');}
+          if(this._selectionPending){const pending=this._selectionPending;if(pending.workspace!==workspace||pending.scope!==this.getAttribute('with'))this.finishSelection();else if(pending.id===this._active){this.finishSelection(pending.title+' is open. Press Play when you are ready.');this._dialog?.close();}}
           const previous=this._select.value, signature=JSON.stringify(this._tracks);
           if(signature!==this._trackSignature){this._trackSignature=signature;this._select.replaceChildren();if(!this._tracks.length){const option=document.createElement('option');option.value='';option.textContent='No songs yet';this._select.append(option);}for(const track of this._tracks){const option=document.createElement('option');option.value=track.id;option.textContent=track.title+(track.artist?' · '+track.artist:'');this._select.append(option);}this._select.value=this._tracks.some(track=>track.id===previous)?previous:this._active||this._tracks[0]?.id||'';}
+          if (this._dialog) { this._select.closest('.row').hidden = !this._tracks.length; this._editDetails.hidden = !this._tracks.length; }
           this._open.disabled=this._busy||!this._select.value;this.shadowRoot.querySelector('.update').disabled=this._busy||!this._select.value;this.links();if(this._editPending){const current=this._tracks.find(track=>track.id===this._editPending.id);if(current&&['title','artist','album','year'].every(key=>current[key]===this._editPending[key])){this._editPending=null;this.status('Details updated. Audio and comments are unchanged.');}}
-          if(this._pending){const origin=[...this.querySelectorAll('.nightsky-song-origin')].find(row=>row.dataset.request===this._pending.nightskySongRequest&&row.dataset.audioSha256===this._pending.nightskySongAudioSha256&&row.dataset.coverSha256===this._pending.nightskySongCoverSha256);if(origin?.dataset.track===this._active){this._pending=null;this._snapshot=null;this._request=null;clearTimeout(this._confirmation);this.setBusy(false);this._form.reset();this._select.value=this._active;this.links();this.status('Song saved and selected. Press Play when you are ready.');}}
+          if(this._pending){const origin=[...this.querySelectorAll('.nightsky-song-origin')].find(row=>row.dataset.request===this._pending.nightskySongRequest&&row.dataset.audioSha256===this._pending.nightskySongAudioSha256&&row.dataset.coverSha256===this._pending.nightskySongCoverSha256);if(origin?.dataset.track===this._active){this._pending=null;this._snapshot=null;this._request=null;clearTimeout(this._confirmation);this.setBusy(false);this._form.reset();this._select.value=this._active;this.links();this.status('Song saved and selected. Press Play when you are ready.');this._dialog?.close();}}
         }
         links() { const track=this._tracks?.find(item=>item.id===this._select.value);let base;try{base=endpoint(this.getAttribute('with'));}catch{}for(const [name,key]of [['audio','audio'],['cover','cover']]){const link=this.shadowRoot.querySelector('.download-'+name);link.hidden=!track||!base;if(track&&base){link.href=base+'/'+track[key];link.download=safeName(track.title,name);}} }
         editFields() { const track=this._tracks?.find(item=>item.id===this._select.value);for(const name of ['title','artist','album','year'])this.field('edit-'+name).value=track?.[name]||''; }
@@ -5545,6 +5568,16 @@ component!: &nightsky-song-editor
       customElements.get('nightsky-song-editor')||customElements.define('nightsky-song-editor',SongEditor);
       customElements.get('nightsky-shared-setup')||customElements.define('nightsky-shared-setup',SharedListeningSetup);
     })();
+
+view!:
+  this: nightsky
+  show:
+    label: |
+      {title}
+    directory: |
+      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6;background:#04070d;color:#eeeade;border-radius:14px;overflow:hidden}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}</style><nightsky-workspace-room workspace="{this}" with="{dom.host/with}"><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display></nightsky-workspace-room><nightsky-song-editor panel workspace="{this}" with="{dom.host/with}" onnightsky-song-add="nightsky-song-add" onnightsky-song-select="nightsky-song-select" onnightsky-song-update="nightsky-song-update"><tonk-display hidden model="nightsky-track" view="options" with="{dom.host/with}"></tonk-display><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display><tonk-display hidden model="nightsky-song-origin" with="{dom.host/with}"></tonk-display></nightsky-song-editor><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header></section>
+    ui: |
+      <section class="nightsky-intro"><tonk-display model="component" with="{dom.host/with}"></tonk-display><style>.nightsky-intro{font-family:system-ui,sans-serif;line-height:1.6;background:#04070d;color:#eeeade;border-radius:14px;overflow:hidden}.nightsky-intro>header{max-width:760px;padding:20px 8px 24px}.nightsky-intro h1{font-size:25px;line-height:1.2;margin:0 0 10px}.nightsky-intro p{margin:8px 0}.nightsky-intro summary{cursor:pointer}.nightsky-intro details{margin-top:12px}</style><nightsky-workspace-room workspace="{this}" with="{dom.host/with}"><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display></nightsky-workspace-room><nightsky-song-editor panel workspace="{this}" with="{dom.host/with}" onnightsky-song-add="nightsky-song-add" onnightsky-song-select="nightsky-song-select" onnightsky-song-update="nightsky-song-update"><tonk-display hidden model="nightsky-track" view="options" with="{dom.host/with}"></tonk-display><tonk-display hidden model="nightsky-active-track" view="selection" with="{dom.host/with}"></tonk-display><tonk-display hidden model="nightsky-song-origin" with="{dom.host/with}"></tonk-display></nightsky-song-editor><tonk-display model="nightsky-extension" with="{dom.host/with}"></tonk-display><header><h1>{title}</h1><details><summary>Make your own copy</summary><p>Give your agent the invite and this prompt to make your own space, change the song or visuals, and set up shared listening. The instructions and source travel with the app.</p><nightsky-shared-setup workspace="{this}" with="{dom.host/with}"></nightsky-shared-setup></details></header></section>
 
 attribute!: &nightsky-remix-markdown
   description: "Local Nightsky remix and maintenance guide"
