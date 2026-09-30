@@ -30,7 +30,7 @@ The Sites starter uses Vinext/React. Build-time scripts validate ordinary YAML m
 
 Copy a folder under `templates/`, edit its manifest, add application YAML and images, and open a pull request. No application code changes are needed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-One template is included: Starter space, Tonk's example vault with its welcome tour and demo apps, exported from the live space. Its image is a screenshot. Compatibility is stated in each manifest. Null contact fields fall back to this project's issue tracker.
+Included templates live under `templates/`. Compatibility is stated in each manifest. Null contact fields fall back to this project's issue tracker.
 
 ## Static hosting
 
@@ -54,8 +54,6 @@ Only the manifest is standard YAML. Never parse/rewrite the application files wi
 
 Build checks validate contribution structure and exported links. They do not execute community code or certify its behavior. Runtime review belongs in the PR.
 
-The Starter space files were evaluated in order into a fresh space with Tonk CLI 0.6.12 and exported again. The export matched the source space's schema, rules, views, components, and starter content. Live browser interactions have not been re-tested after the export. The template uses no external services: its fonts and images are inline.
-
 ## Project layout
 
 ```text
@@ -71,4 +69,4 @@ public/content/          ignored generated source copies
 
 ## License
 
-MIT for this repository. The Starter space template is CC0 1.0, except for its embedded fonts and third-party artwork, which keep their own licenses. Contributions declare their own license in the manifest.
+MIT for this repository. Contributions declare their own license in the manifest; bundled third-party assets keep their own licenses.
