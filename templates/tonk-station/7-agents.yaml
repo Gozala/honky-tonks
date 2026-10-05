@@ -114,6 +114,31 @@ tonk/agents!:
 
     Retry only after a confirmed failed or cancelled outcome and the user's review of partial effects. Create a fresh request with `retry-of` referencing the original task key, preserving request text, agent, and context. Reconcile interrupted executions before retrying. Never erase task history to make work appear new.
 
+    ## Artifact content
+
+    Artifacts are `deck/instance` records. Their `content` field (`xyz.tonk.deck.card/content`, also exposed as `deck/card-content`) is JSON encoded as text, never raw text or bare markdown. Its shape depends on `kind`:
+
+    | Kind | Artifact | `content` |
+    | --- | --- | --- |
+    | `text` | A rich markdown note | `{"markdown": "# Heading\n\nBody"}` |
+    | `table` | A small spreadsheet | `{"content": "<CSV>"}` |
+
+    The kind `text` means a markdown note, not plain text. Put the note body, as markdown, in the `markdown` key.
+
+    - Build the value with a JSON serializer (`jq`, `JSON.stringify`, `json.dumps`), not by hand, so quotes and newlines are escaped.
+    - To edit a note, read its current `content`, parse it, change `markdown`, keep any other keys, and write the serialized object back. Never write the markdown itself as `content`.
+    - Before the write, check that the value parses as a JSON object and that `markdown` (or `content` for a table) is a string. After the write, read the record back and check again.
+
+    For example, to replace a note's body:
+
+    ```yaml
+    deck/card-content!:
+      this: NOTE_ENTITY
+      content: '{"markdown": "# Agenda\n\n- Review the plan\n- Agree next steps"}'
+    ```
+
+    The YAML single quotes keep `\n` as the JSON escape. The dashboard recovers some wrong shapes for display, but search and other agents read only the documented shape, so always write it.
+
     ## Visual style for artifacts and UI
 
     Everything in this space follows one style: 2026 Apple-like functional minimalism for productivity software. Content comes first, chrome is quiet, and every element has a job. Match the existing deck (sidebar, ⌘K palette, cards, Agent tasks) rather than inventing a new look. When in doubt, remove something.

@@ -1219,9 +1219,23 @@ xyz.tonk.component!:
         text: () => ({ markdown: '' }),
         table: () => ({ content: ',\n,\n,' }),
       };
-      // Coerce a parsed content document into the kind's shape; never
-      // trust stored JSON (an agent may have written it by hand).
-      const normalize = (kind, d) => {
+      // Coerce stored content into the kind's shape; never trust it (an
+      // agent may have written it by hand). A text note is
+      // {"markdown": "..."}, but agents often store the markdown itself,
+      // a JSON string, or {"text"|"body"|"content": "..."}: read those as
+      // the note's markdown, so the next edit saves the correct shape
+      // instead of an empty note over the agent's text.
+      const normalize = (kind, raw) => {
+        let d = null;
+        try { d = JSON.parse(raw); } catch (x) { d = null; }
+        if (kind !== 'table') {
+          if (typeof d === 'string') return { markdown: d };
+          if (d && typeof d === 'object' && !Array.isArray(d) && typeof d.markdown !== 'string') {
+            const alias = ['text', 'body', 'content'].find(k => typeof d[k] === 'string');
+            if (alias) return { markdown: d[alias] };
+          }
+          if ((!d || typeof d !== 'object' || Array.isArray(d)) && typeof raw === 'string') return { markdown: raw };
+        }
         d = d && typeof d === 'object' ? d : {};
         if (kind === 'table') {
           // The persisted shape is just <tonk-table>'s own content
@@ -1658,7 +1672,7 @@ xyz.tonk.component!:
             // identity for nothing.
             const prev = prevById.get(cd.id);
             if (prev && prev.content === cd.content && prev.kind === cd.kind) cd.data = prev.data;
-            else { let p = null; try { p = JSON.parse(cd.content); } catch (x) { p = null; } cd.data = normalize(cd.kind, p); }
+            else cd.data = normalize(cd.kind, cd.content);
             byId.set(cd.id, cd);
             const col = byKey.get(cd.column);
             if (col) col.cards.push(cd);
@@ -1679,7 +1693,7 @@ xyz.tonk.component!:
             if (pc && now - pc.at <= EXP) cd.content = pc.json;
             const prev = prevById.get(id);
             if (prev && prev.content === cd.content && prev.kind === cd.kind) cd.data = prev.data;
-            else { let p = null; try { p = JSON.parse(cd.content); } catch (x) { p = null; } cd.data = normalize(cd.kind, p); }
+            else cd.data = normalize(cd.kind, cd.content);
             byId.set(id, cd);
             const col = byKey.get(cd.column);
             if (col) col.cards.push(cd);

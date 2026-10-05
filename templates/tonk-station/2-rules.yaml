@@ -13,7 +13,7 @@ concept!: &export/compiled-0910b5df7de6d2de
       the: xyz.tonk.deck.card/content
       as: text
       cardinality: one
-      description: "Kind-specific payload, as a JSON document"
+      description: "Kind-specific payload as JSON text, never raw text or bare markdown. kind text (a markdown note): {\"markdown\": \"# Heading\\n\\nBody\"}. kind table: {\"content\": \"<CSV>\"}."
     deck:
       the: xyz.tonk.deck.instance/deck
       as: text
@@ -23,7 +23,7 @@ concept!: &export/compiled-0910b5df7de6d2de
       the: xyz.tonk.deck.card/kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
 
 ---
 concept!: &export/compiled-0d9647f9242de4b7
@@ -33,7 +33,7 @@ concept!: &export/compiled-0d9647f9242de4b7
       the: xyz.tonk.deck.card/kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
 
 ---
 concept!: &export/compiled-0f06f7da80f66d92
@@ -144,12 +144,12 @@ concept!: &export/compiled-1e4d14edfa46ebce
       the: dom.event.detail/deck-card-content
       as: text
       cardinality: one
-      description: "Initial content JSON"
+      description: "Initial content as JSON text. kind text: {\"markdown\": \"...\"}. kind table: {\"content\": \"<CSV>\"}."
     kind:
       the: dom.event.detail/deck-card-kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
     order:
       the: dom.event.detail/deck-card-order
       as: text
@@ -577,12 +577,12 @@ concept!: &export/compiled-7929150c21711e5e
       the: xyz.tonk.deck.card/content
       as: text
       cardinality: one
-      description: "Kind-specific payload, as a JSON document"
+      description: "Kind-specific payload as JSON text, never raw text or bare markdown. kind text (a markdown note): {\"markdown\": \"# Heading\\n\\nBody\"}. kind table: {\"content\": \"<CSV>\"}."
     kind:
       the: xyz.tonk.deck.card/kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
     order:
       the: xyz.tonk.deck.card/order
       as: text
@@ -754,7 +754,7 @@ concept!: &export/compiled-958eb903b6c43590
       the: xyz.tonk.deck.card/content
       as: text
       cardinality: one
-      description: "Kind-specific payload, as a JSON document"
+      description: "Kind-specific payload as JSON text, never raw text or bare markdown. kind text (a markdown note): {\"markdown\": \"# Heading\\n\\nBody\"}. kind table: {\"content\": \"<CSV>\"}."
 
 ---
 concept!: &export/compiled-a0ba562467778d56
