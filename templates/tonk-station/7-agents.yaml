@@ -1,13 +1,13 @@
 # The shared agent guide (AGENTS.md): the task protocol and the visual style
-# rules for agents connected to this space. It is asserted on the space's own
-# repository subject, found through db/origin, so it works in any space.
+# rules for agents connected to this space. It is set on the space's own
+# repository subject, found through tonk/replica, so it works in any space.
 # Read it with `tonk space agents get`.
-db/origin:
-  this: ?origin
-  subject: ?space
+tonk/replica:
+  this: ?agents-guide-replica
+  subject: ?agents-guide-space
 
 tonk/agents!:
-  this: ?space
+  this: ?agents-guide-space
   markdown: |
     # Tonk dashboard agent guide
 

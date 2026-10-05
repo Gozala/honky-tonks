@@ -955,16 +955,6 @@ db.meta!:
 
 ---
 db.name!:
-  this: id:adhoc/route
-  referent: tonk:adhoc/route
-
----
-db.name!:
-  this: id:agent-connection
-  referent: tonk:agent-connection
-
----
-db.name!:
   this: id:agent-task-key
   referent: the:BK3dgzJaYtivPY1aq7o78ZrHjc27CnxtGjTev8WgPtLU
 
@@ -1012,26 +1002,6 @@ db.name!:
 db.name!:
   this: id:agent/task-result
   referent: tonk:agent/task-result
-
----
-db.name!:
-  this: id:artifact/route
-  referent: tonk:artifact/route
-
----
-db.name!:
-  this: id:authorization
-  referent: tonk:authorization
-
----
-db.name!:
-  this: id:blank
-  referent: tonk:blank
-
----
-db.name!:
-  this: id:blob
-  referent: tonk:blob
 
 ---
 db.name!:
@@ -1122,16 +1092,6 @@ db.name!:
 db.name!:
   this: id:column-view
   referent: concept:FHHBrXrKPCtRqqem3tvVd9ABDw8dsx4gCpVoMfsYtag2
-
----
-db.name!:
-  this: id:component
-  referent: concept:6QkKpBFbGHAmdVgu5VixUEAKcDXqi1RCHbRbSFsRTNmy
-
----
-db.name!:
-  this: id:credential
-  referent: tonk:credential
 
 ---
 db.name!:
@@ -1365,11 +1325,6 @@ db.name!:
 
 ---
 db.name!:
-  this: id:diagnose
-  referent: dialog:diagnose
-
----
-db.name!:
   this: id:dialog-branch-moment
   referent: the:G9v3K1G3JzzzPiQbkPuLARqa5teg7AQkqpundKGxR2jk
 
@@ -1452,11 +1407,6 @@ db.name!:
 db.name!:
   this: id:dialog-session-profile
   referent: the:Ew1zQcswSVLbukE5LctapyTaVNd5RaQp9cS2B7qLcPst
-
----
-db.name!:
-  this: id:directory/route
-  referent: tonk:directory/route
 
 ---
 db.name!:
@@ -1845,16 +1795,6 @@ db.name!:
 
 ---
 db.name!:
-  this: id:drag-frame
-  referent: did:key:z6Mk4EeLSwQMTaZuUQdEHfdNF5JXVWMwVa5znqLHSzmCPEBL
-
----
-db.name!:
-  this: id:element
-  referent: concept:AvK31RSJ45U2pa2682ySyW8ebWt7Q4dHwWzMAWWM6hHk
-
----
-db.name!:
   this: id:grid-document
   referent: the:Ckt6v1bhQSTZD37zMkbYv1KELMBGWmPY8JUAyrhNHbtz
 
@@ -1872,21 +1812,6 @@ db.name!:
 db.name!:
   this: id:grid/record
   referent: tonk:grid/record
-
----
-db.name!:
-  this: id:inline-editable
-  referent: did:key:z6MkHjqFEUooGc6qGFhUq1rCiTtzhz4TxBpGvZeWtVEr6zt8
-
----
-db.name!:
-  this: id:inspector
-  referent: concept:5ksSpHB5KYS5aErr55zBYMDKW2MYhjRN5fAawoxRXVrM
-
----
-db.name!:
-  this: id:invitation
-  referent: tonk:invitation
 
 ---
 db.name!:
@@ -2120,16 +2045,6 @@ db.name!:
 
 ---
 db.name!:
-  this: id:member
-  referent: tonk:member
-
----
-db.name!:
-  this: id:member/expel
-  referent: concept:CvHNjD1W5eo1vPTWj4iR9nH5ySfpXBeBNHsVAh3W8W2F
-
----
-db.name!:
   this: id:note/recovery
   referent: tonk:note/recovery
 
@@ -2145,66 +2060,6 @@ db.name!:
 
 ---
 db.name!:
-  this: id:on/change
-  referent: did:key:z6Mk2RkAmqFVzFXcePDrdBgNmu2bVm7Wayvms3hXFqE9XQ5e
-
----
-db.name!:
-  this: id:on/click
-  referent: did:key:z6MkZx5RZ6f5bs4ev7PGoiBF5RfGsw8jfzCWYEsvys5P56f
-
----
-db.name!:
-  this: id:on/click-once
-  referent: did:key:z6Mk91XLQNguor3VvqCVPRDn5NAovmiV1HFJTfWQbf7aTYni
-
----
-db.name!:
-  this: id:on/invite
-  referent: did:key:z6MkEukVJCBBhDynECmTu17B5Yx6cjuWsyfHLdGoLyikkKzo
-
----
-db.name!:
-  this: id:on/new-agent-invite
-  referent: did:key:z6MkAYs579qMGcL4HT2FAx1xHeNecqe3ugnPgq65kVv2dq6o
-
----
-db.name!:
-  this: id:on/repository-rename
-  referent: did:key:z6MkAFpcuvFLCRWZhZpt2fLpS82vLzp16YRUjLLfedbyft9C
-
----
-db.name!:
-  this: id:on/submit
-  referent: did:key:z6MkBrjgqSE4eXasVJ7vkL7LzQikuo7493S4J1UEyAgAcXdi
-
----
-db.name!:
-  this: id:on/toggle
-  referent: did:key:z6Mk5fWnEdRp7qULvfNf8FeeS6RA3znhseaYc9ReV8cfSnPi
-
----
-db.name!:
-  this: id:page-mount
-  referent: did:key:z6MkE6VktLWLQLuZ4z7ryYN5TWsHkNeTUeevvk3XPJbr8QL6
-
----
-db.name!:
-  this: id:portal
-  referent: concept:7pyvhnW1RwvmrSgip69ecySZ2dLNmP6anuVaVqrLuEHP
-
----
-db.name!:
-  this: id:profile/rename
-  referent: concept:FDBXoZRr6tTwaVg5tVQMef6kAmtr9C559KkTMUvCrHEw
-
----
-db.name!:
-  this: id:route
-  referent: tonk:route
-
----
-db.name!:
   this: id:rtc/reply
   referent: concept:DMLtpZZuZxiVBQF91zwh9yrMesfsvRFL8chdRRJzFgBQ
 
@@ -2212,31 +2067,6 @@ db.name!:
 db.name!:
   this: id:rtc/signal
   referent: concept:9yXEM6S3zeLWUSg8jhLpTk5b4tZn3SGa2E3UJkGm4P8L
-
----
-db.name!:
-  this: id:seed/available
-  referent: tonk:seed/available
-
----
-db.name!:
-  this: id:seed/install
-  referent: concept:5ZTx53fjDzcRwSw8usE2oYgeL8jn2TBttW11XEWAMYsR
-
----
-db.name!:
-  this: id:seed/installed
-  referent: tonk:seed/installed
-
----
-db.name!:
-  this: id:seed/name
-  referent: concept:3a5eYViDmg7WjwNCkvufzsdC5y6TMmPJA9EXH1Cdexkm
-
----
-db.name!:
-  this: id:seed/route
-  referent: concept:PYwp4YMdJySaJGLGUck8sZX78w2h3p1YeB3Ak6EHj7b
 
 ---
 db.name!:
@@ -2257,11 +2087,6 @@ db.name!:
 db.name!:
   this: id:session/label
   referent: tonk:session/label
-
----
-db.name!:
-  this: id:share/blocked
-  referent: tonk:share/blocked
 
 ---
 db.name!:
@@ -2680,36 +2505,6 @@ db.name!:
 
 ---
 db.name!:
-  this: id:site
-  referent: tonk:site
-
----
-db.name!:
-  this: id:space
-  referent: tonk:space
-
----
-db.name!:
-  this: id:space-home
-  referent: space:home
-
----
-db.name!:
-  this: id:space/enable-sync
-  referent: concept:FJJPFcEdASqegD4G268cT9yLmdfmawmCWDbUjirgd9WF
-
----
-db.name!:
-  this: id:space/route
-  referent: tonk:space/route
-
----
-db.name!:
-  this: id:tab-title
-  referent: did:key:z6Mk8qHK4MbowtdJhK8PbDxqdpSJdekbkxyimNdJ7BG99GfD
-
----
-db.name!:
   this: id:term/session
   referent: concept:4rerCAmVaE2PPzbUshfiiWZqGr2M97dRkKzWXDgX6fP7
 
@@ -2717,66 +2512,6 @@ db.name!:
 db.name!:
   this: id:tile
   referent: concept:7ptXg8Ck5is19i7Ku6K4BiqhwwWvaHozCEv1XoTNPod4
-
----
-db.name!:
-  this: id:tonk/agent-handoff-state
-  referent: tonk:agent-handoff-state
-
----
-db.name!:
-  this: id:tonk/agent-invite
-  referent: tonk:agent-invite
-
----
-db.name!:
-  this: id:tonk/agents
-  referent: tonk:agents
-
----
-db.name!:
-  this: id:tonk/agents-markdown
-  referent: the:4zHZYkgZQcAjcBacDbg9wibKKH5nZrAjmKNMHKQT5Di3
-
----
-db.name!:
-  this: id:tonk/identity
-  referent: tonk:identity
-
----
-db.name!:
-  this: id:tonk/invite
-  referent: tonk:invite
-
----
-db.name!:
-  this: id:tonk/load
-  referent: tonk:load
-
----
-db.name!:
-  this: id:tonk/rename-repository
-  referent: concept:DHMH8mdkQSfr7ELg73wgL3iR7CTomJjWXchaEFAejrfC
-
----
-db.name!:
-  this: id:tonk/replica
-  referent: tonk:replica
-
----
-db.name!:
-  this: id:tonk/repository
-  referent: tonk:repository
-
----
-db.name!:
-  this: id:tonk/space
-  referent: space:home
-
----
-db.name!:
-  this: id:tonk/sync
-  referent: tonk:sync
 
 ---
 db.name!:
@@ -2892,11 +2627,6 @@ db.name!:
 db.name!:
   this: id:weather/show-request
   referent: tonk:weather/show-request
-
----
-db.name!:
-  this: id:workspace/shell
-  referent: tonk:workspace/shell
 
 ---
 db.name!:
@@ -9688,7 +9418,7 @@ attribute!: &terminal-setup-extractor
   as: Text
   cardinality: one
 
-concept!:
+concept!: &terminal/setup
   this: tonk:terminal/setup
   description: "Portable terminal host and Cloudflare setup instructions for agents"
   with:
@@ -9697,9 +9427,7 @@ concept!:
     manifest: terminal-setup-manifest
     extractor: terminal-setup-extractor
 
-name!:
-  this: id:terminal/setup
-  entity: tonk:terminal/setup
+# (named by the anchor on its concept)
 
 attribute!: &terminal-setup-file-version
   description: "Terminal setup-file version"
@@ -9725,7 +9453,7 @@ attribute!: &terminal-setup-file-content
   as: Text
   cardinality: one
 
-concept!:
+concept!: &terminal/setup-file
   this: tonk:terminal/setup-file
   description: "Versioned credential-free source file for terminal setup"
   with:
@@ -9734,6 +9462,4 @@ concept!:
     sha256: terminal-setup-file-sha256
     content: terminal-setup-file-content
 
-name!:
-  this: id:terminal/setup-file
-  entity: tonk:terminal/setup-file
+# (named by the anchor on its concept)
