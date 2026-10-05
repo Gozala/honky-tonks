@@ -1,0 +1,3072 @@
+# ---- 05-terminal-setup-package.yaml ----
+# Credential-free terminal installer. Read terminal/setup with the Tonk CLI.
+terminal/setup!:
+  this: id:terminal/setup
+  version: "1.0.0"
+  instructions: |
+    # Terminal connection setup — version 1.0.0
+    
+    This package belongs to the terminal artifact. It contains its local host, Cloudflare Worker, and agent operations. Use the existing Tonk CLI; do not change Tonk or require another dashboard checkout. Supported hosts: macOS or Linux with Node 22+, npm, tmux 3.2+, and a connected Tonk CLI. On Windows use a Linux/WSL host. This package provides terminal sessions, not a chat or task executor.
+    
+    ## Find and extract the package from a space
+    
+    Run commands from the user's connected workspace. First run `tonk status` and confirm the intended space. If this workspace uses an existing `.tonk-state` directory, set `TONK_SPACES_STATE` to that directory's absolute path for every CLI call. Preserve other bindings. If not connected, use the user's normal invitation flow and wait for `Agent connection confirmed`; do not invent an invite or reuse another space's authority.
+    
+    The entry record is `id:terminal/setup`, queried with `tonk query terminal/setup --json`. Read its `instructions` field (this guide). All source files are `terminal/setup-file` rows, tied to the setup version. No credentials are included in these rows.
+    
+    1. Save `tonk query terminal/setup --json` to `terminal-setup.json` and `tonk query terminal/setup-file --json` to `terminal-setup-files.json` in a local preparation directory. Use the connected space alias explicitly if needed.
+    2. Read the setup's `extractor` field. It is the included `extract.mjs` source. Save it locally, inspect it, then run it with the two query results:
+    
+    ```sh
+    node -e 'const fs=require("node:fs");const rows=JSON.parse(fs.readFileSync("terminal-setup.json","utf8"));fs.writeFileSync("extract-terminal.mjs",rows.find(r=>r.this==="id:terminal/setup").extractor,{flag:"wx"})'
+    node -e 'const fs=require("node:fs");process.stdout.write(JSON.stringify({setup:JSON.parse(fs.readFileSync("terminal-setup.json","utf8")),files:JSON.parse(fs.readFileSync("terminal-setup-files.json","utf8"))}))' | node extract-terminal.mjs ./terminal-connection
+    ```
+    
+    The extractor requires a fresh destination, checks every path and SHA-256 against the manifest, and refuses mismatches before writing. Hashes verify consistency with the space, not independent code provenance. Review the extracted source before executing it. All following commands run from `terminal-connection/` unless stated otherwise.
+    
+    ## Agent operation: set up
+    
+    1. Inspect the current connection before changing it. Query `deck/setting` with the CLI and report only whether relay URL/room/token are present; never print tokens. If an existing connection is healthy, reuse it. If this is a clone, create a fresh installation rather than inheriting access to its source computer. A YAML export can include old connection settings: their presence does not prove ownership or freshness.
+    2. Check `node --version`, `npm --version`, `tmux -V`, and `tonk status`. Resolve missing dependencies with the user's platform package manager. `npm install` in this package installs pinned node-pty 1.1.0 and Wrangler 4.130.0. Native node-pty may require platform build tools. Do not load Claude, another agent, or a neighboring repository.
+    3. Initialise local configuration, supplying actual verified values (the placeholders below must be replaced):
+    
+    ```sh
+    node setup.mjs init --cwd /absolute/workspace --space LOCAL_SPACE_ALIAS --tonk /absolute/path/to/tonk
+    ```
+    
+    If the workspace uses an isolated state directory, also pass `--state-dir /absolute/workspace/.tonk-state`. The default Worker name and room are unique. Optional `--worker-name` selects a NEW Worker name; do not overwrite another deployment. Init validates `sync: synced`, refuses existing configuration, and creates `.private/host.json`, `.private/browser.json`, and `worker/wrangler.jsonc`. Private files are mode 0600 inside a mode-0700 directory. Never commit or publish `.private/`, never put the host token in Tonk, and never include credentials in a response.
+    
+    4. Explain the access being set up: members holding this space's browser credential can execute shell commands as this machine's user; the working directory is not a sandbox. Use the Cloudflare account the user intends. Inspect `npx wrangler whoami`; if login is needed run `npx wrangler login` and let the user complete authentication. Do not switch accounts silently. New cloud resources or charges should be handled under the user's existing authorization and your applicable approval policy.
+    5. Deploy the provided Worker and install its secrets:
+    
+    ```sh
+    npx wrangler deploy --config worker/wrangler.jsonc
+    node setup.mjs secrets
+    ```
+    
+    The Worker has one Durable Object room and separate host/browser credentials. It rejects connections until secrets are configured. `secrets` supplies both keys to the configured Worker's `wrangler secret bulk` over stdin, never command arguments or console output. Record the URL actually returned by deploy; do not guess the account subdomain. Store it with:
+    
+    ```sh
+    node setup.mjs url https://ACTUAL_WORKER_HOST.workers.dev
+    ```
+    
+    6. Publish the three browser settings atomically through Tonk, then verify their values and `sync: synced`:
+    
+    ```sh
+    node setup.mjs publish
+    ```
+    
+    Existing differing credentials cause a stop. Use `node setup.mjs publish --replace` only when an intentional replacement or fresh clone is established. Stop any host for the target installation before changing its settings so its CLI queue does not compete. Preserve the former private configuration for recovery. Never replace a working connection just because the terminal UI was reloaded.
+    7. Start the local host with `node start.mjs`. Keep it running in a terminal or a background process with a private log and recorded PID. Do not assume a detached process survives reboot; install a launch/login service only when requested. On a second terminal run `node verify.mjs`. It authenticates through the relay, opens a uniquely named temporary shell, prints a marker and `pwd`, verifies the actual output and working directory, and kills only that temporary shell. Open/reload the dashboard terminal and verify it attaches. Host startup alone is not end-to-end success.
+    8. Report the verified result, local package directory, start/stop commands, and any unverified browser or network step. Keep all secrets out of the response.
+    
+    ## Agent operation: diagnose
+    
+    Start with `node setup.mjs doctor`. It checks Node, tmux, node-pty, the bound space and sync, presence of the three relay settings, and the Worker's health endpoint without printing tokens. A health HTTP 200 does not prove authentication. With the host running, use `node verify.mjs` to test the real path.
+    
+    - Missing settings: follow setup. If this was a clone, provision fresh credentials.
+    - Relay authentication rejected: compare the room and browser credential locally against this installation, and verify the Worker secrets. Do not print them or transmit them to any other endpoint.
+    - Relay connected but no host: start this package's `start.mjs` on the intended machine; check its log.
+    - Host already connected: identify the existing owner before stopping or replacing anything. The Worker allows only one host per room.
+    - Host connected but no shell: inspect tmux/node-pty errors and filesystem permissions; verify the configured cwd exists. The host requires tmux >=3.2.
+    - Tonk lock errors: avoid parallel CLI calls; stop the relevant local host briefly before direct maintenance, or use its local serialized admin socket. Preserve tmux sessions.
+    - Blank screen with a passing shell test: reload the terminal/page. Do not rotate working credentials to fix a rendering issue.
+    
+    ## Agent operation: disconnect
+    
+    For a temporary disconnect, Ctrl-C the foreground host or send SIGTERM to its verified PID. This stops relay access while preserving its tmux sessions. Confirm the host is offline; do not kill unrelated Node or tmux processes.
+    
+    For permanent revocation, stop this host first, then remove/rotate BOTH Worker secrets (HOST_TOKEN and BROWSER_TOKEN) and clear only this connection's three `deck/setting` values through `deck/update-setting` after querying their entity IDs. Verify sync. Clearing space settings alone does not revoke a copied key, and updating Worker secrets alone may leave existing sockets alive until their lease expires (up to 45 seconds). Confirm old credentials can no longer connect. Delete the Worker only when the user requests removal of the cloud resource. Preserve or explicitly remove local shell sessions according to the user's request.
+    
+    ## Distributing YAML or cloning a space
+    
+    Include the terminal/setup and terminal/setup-file schemas and records plus the terminal components. Strip session-relay-url, session-relay-room and session-relay-token VALUES from reusable template exports. The embedded package itself is credential-free. Tonk cloning does not provide this package with a clone event, so it cannot automatically invalidate inherited credentials; for a full state clone the setup agent must establish ownership and use fresh pairing. The terminal shows setup instructions when any connection setting is absent, and diagnostic instructions when configured but disconnected.
+    
+    ## References
+    
+    - https://developers.cloudflare.com/workers/wrangler/commands/workers/ (deploy and secret bulk)
+    - https://developers.cloudflare.com/workers/wrangler/commands/general/ (login and whoami)
+    - https://developers.cloudflare.com/workers/wrangler/configuration/ (Worker and Durable Object configuration)
+    
+    The Worker source uses the existing, compatible SQLite Durable Object migration declaration and Wrangler 4.130.0. No deployment is performed just by importing this YAML.
+    
+  manifest: "[{\"path\":\"package.json\",\"sha256\":\"3c14b508f099d06c8e555a77d7065f25c476019dff69e4768bfd03341fd8843b\",\"bytes\":329},{\"path\":\".gitignore\",\"sha256\":\"ffe1a40c8cf18927c8c56de9e5957211892badf6672a8a0b41ce4949ea26ae3a\",\"bytes\":64},{\"path\":\"AGENT-SETUP.md\",\"sha256\":\"87a18616c6a5c7d8327ddc1bff31f4a8403efa9965cb9a6fbd82ce98d7f5fd10\",\"bytes\":9642},{\"path\":\"config.mjs\",\"sha256\":\"f9f6e907187c3f568aaaa3aec5769e25b50587256c81b1b3c8409f7e0dc61e78\",\"bytes\":1262},{\"path\":\"start.mjs\",\"sha256\":\"5be8cc887f72cdaf3b9221e0e48df9e044dea703783b1d57fc2f7aa7c392d0cf\",\"bytes\":1974},{\"path\":\"setup.mjs\",\"sha256\":\"753a4197f1de7d3386dd9f2392aaa7b32ce00dd4a540b2d3676836398c6c1097\",\"bytes\":5735},{\"path\":\"verify.mjs\",\"sha256\":\"1b173af5f5189a6d3865a95addf7f5c9c5a8a4c5995870acb6a593e80c5b0545\",\"bytes\":1853},{\"path\":\"extract.mjs\",\"sha256\":\"f52838858302caf187747452a061037f62aef93ba31649188500fbd3c18014d7\",\"bytes\":1672},{\"path\":\"agent/hub.mjs\",\"sha256\":\"c3286cf926908579f507ba3d6a219bc705d07927aa3d4488c8468d1c16303b69\",\"bytes\":82130},{\"path\":\"agent/pty-host.mjs\",\"sha256\":\"7c66b88dee7947d1fab83592187a9b6914e4f048b9df595c12108163479a44d4\",\"bytes\":12543},{\"path\":\"agent/terminal-config.mjs\",\"sha256\":\"fa61b65c595e4fb1ce4447b5e319c61624c453492fb9926bf5ef4df2fd88cc6b\",\"bytes\":2579},{\"path\":\"agent/terminal-title.mjs\",\"sha256\":\"e7d93b21b103b5268830c91dc7dd85a4c8efd18694682ebc8c3389de561f9dda\",\"bytes\":665},{\"path\":\"agent/bus.mjs\",\"sha256\":\"92c2c60b0d390da79d5afa6415412c0ed86204a412e9bf2a02e946440e2aa685\",\"bytes\":7187},{\"path\":\"agent/relay-bridge.mjs\",\"sha256\":\"ff1f82c4d777276b586bb5ca8a8f02a3f7d74a242ec47ff9d2155994215909fd\",\"bytes\":966},{\"path\":\"agent/channels/relay.mjs\",\"sha256\":\"1c3bf6cd1faf6975cbe6ca34ee26623ec8aa6cd7975abf2496ec94d0ad70d5ec\",\"bytes\":2952},{\"path\":\"agent/runners/hub.mjs\",\"sha256\":\"0fc57813ff3a27a03b8d6bee7acba7d2715afc994f1b45cd2311f7ad1b723131\",\"bytes\":3795},{\"path\":\"session/relay-client.mjs\",\"sha256\":\"543c4331751726ea5d05a2ad1981093d66dea1890869abb36c51d68538565fbf\",\"bytes\":2879},{\"path\":\"worker/relay.ts\",\"sha256\":\"21c5f430e28b9f4f639a1ae886a545aadb79f8214bdf6cb50a94d12aced6cf54\",\"bytes\":7295}]"
+  extractor: |
+    // Read a JSON object with {setup: <terminal/setup rows>, files: <terminal/setup-file rows>}.
+    // Validates every entry before creating a fresh directory. Never overwrites a checkout.
+    import {readFileSync,mkdirSync,writeFileSync,existsSync} from 'node:fs';
+    import {resolve,dirname} from 'node:path';
+    import {createHash} from 'node:crypto';
+    const input=JSON.parse(readFileSync(0,'utf8'));
+    const setup=input.setup.find(r=>r.this==='id:terminal/setup');
+    if(!setup)throw Error('Missing id:terminal/setup');
+    const manifest=JSON.parse(setup.manifest),expected=new Map(manifest.map(f=>[f.path,f]));
+    const rows=input.files.filter(f=>f.version===setup.version);
+    if(rows.length!==expected.size)throw Error('File count mismatch');
+    const seen=new Set();
+    for(const f of rows){
+     if(!/^[a-zA-Z0-9_.\/-]+$/.test(f.path)||f.path.startsWith('/')||f.path.split('/').some(p=>!p||p==='.'||p==='..')||seen.has(f.path))throw Error('Unsafe or duplicate path');
+     const want=expected.get(f.path),hash=createHash('sha256').update(f.content).digest('hex');
+     if(!want||hash!==want.sha256||hash!==f.sha256||Buffer.byteLength(f.content)!==want.bytes)throw Error('Integrity mismatch: '+f.path);
+     seen.add(f.path);
+    }
+    if(!process.argv[2])throw Error('Pass a fresh destination directory');
+    const dest=resolve(process.argv[2]);if(existsSync(dest))throw Error('Destination already exists; choose a fresh directory');
+    mkdirSync(dest,{mode:0o700});
+    for(const f of rows){const path=resolve(dest,f.path);mkdirSync(dirname(path),{recursive:true,mode:0o700});writeFileSync(path,f.content,{flag:'wx',mode:0o600})}
+    console.log('Extracted terminal setup '+setup.version+' ('+rows.length+' verified files) into '+dest);
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/package.json
+  version: "1.0.0"
+  path: "package.json"
+  sha256: "3c14b508f099d06c8e555a77d7065f25c476019dff69e4768bfd03341fd8843b"
+  content: |
+    {
+      "name": "tonk-terminal-setup",
+      "version": "1.0.0",
+      "private": true,
+      "type": "module",
+      "engines": { "node": ">=22" },
+      "scripts": { "start": "node start.mjs", "doctor": "node setup.mjs doctor", "verify": "node verify.mjs" },
+      "dependencies": { "node-pty": "1.1.0" },
+      "devDependencies": { "wrangler": "4.130.0" }
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/.gitignore
+  version: "1.0.0"
+  path: ".gitignore"
+  sha256: "ffe1a40c8cf18927c8c56de9e5957211892badf6672a8a0b41ce4949ea26ae3a"
+  content: |
+    node_modules/
+    .private/
+    worker/wrangler.jsonc
+    worker/.wrangler/
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/AGENT-SETUP.md
+  version: "1.0.0"
+  path: "AGENT-SETUP.md"
+  sha256: "87a18616c6a5c7d8327ddc1bff31f4a8403efa9965cb9a6fbd82ce98d7f5fd10"
+  content: |
+    # Terminal connection setup — version 1.0.0
+    
+    This package belongs to the terminal artifact. It contains its local host, Cloudflare Worker, and agent operations. Use the existing Tonk CLI; do not change Tonk or require another dashboard checkout. Supported hosts: macOS or Linux with Node 22+, npm, tmux 3.2+, and a connected Tonk CLI. On Windows use a Linux/WSL host. This package provides terminal sessions, not a chat or task executor.
+    
+    ## Find and extract the package from a space
+    
+    Run commands from the user's connected workspace. First run `tonk status` and confirm the intended space. If this workspace uses an existing `.tonk-state` directory, set `TONK_SPACES_STATE` to that directory's absolute path for every CLI call. Preserve other bindings. If not connected, use the user's normal invitation flow and wait for `Agent connection confirmed`; do not invent an invite or reuse another space's authority.
+    
+    The entry record is `id:terminal/setup`, queried with `tonk query terminal/setup --json`. Read its `instructions` field (this guide). All source files are `terminal/setup-file` rows, tied to the setup version. No credentials are included in these rows.
+    
+    1. Save `tonk query terminal/setup --json` to `terminal-setup.json` and `tonk query terminal/setup-file --json` to `terminal-setup-files.json` in a local preparation directory. Use the connected space alias explicitly if needed.
+    2. Read the setup's `extractor` field. It is the included `extract.mjs` source. Save it locally, inspect it, then run it with the two query results:
+    
+    ```sh
+    node -e 'const fs=require("node:fs");const rows=JSON.parse(fs.readFileSync("terminal-setup.json","utf8"));fs.writeFileSync("extract-terminal.mjs",rows.find(r=>r.this==="id:terminal/setup").extractor,{flag:"wx"})'
+    node -e 'const fs=require("node:fs");process.stdout.write(JSON.stringify({setup:JSON.parse(fs.readFileSync("terminal-setup.json","utf8")),files:JSON.parse(fs.readFileSync("terminal-setup-files.json","utf8"))}))' | node extract-terminal.mjs ./terminal-connection
+    ```
+    
+    The extractor requires a fresh destination, checks every path and SHA-256 against the manifest, and refuses mismatches before writing. Hashes verify consistency with the space, not independent code provenance. Review the extracted source before executing it. All following commands run from `terminal-connection/` unless stated otherwise.
+    
+    ## Agent operation: set up
+    
+    1. Inspect the current connection before changing it. Query `deck/setting` with the CLI and report only whether relay URL/room/token are present; never print tokens. If an existing connection is healthy, reuse it. If this is a clone, create a fresh installation rather than inheriting access to its source computer. A YAML export can include old connection settings: their presence does not prove ownership or freshness.
+    2. Check `node --version`, `npm --version`, `tmux -V`, and `tonk status`. Resolve missing dependencies with the user's platform package manager. `npm install` in this package installs pinned node-pty 1.1.0 and Wrangler 4.130.0. Native node-pty may require platform build tools. Do not load Claude, another agent, or a neighboring repository.
+    3. Initialise local configuration, supplying actual verified values (the placeholders below must be replaced):
+    
+    ```sh
+    node setup.mjs init --cwd /absolute/workspace --space LOCAL_SPACE_ALIAS --tonk /absolute/path/to/tonk
+    ```
+    
+    If the workspace uses an isolated state directory, also pass `--state-dir /absolute/workspace/.tonk-state`. The default Worker name and room are unique. Optional `--worker-name` selects a NEW Worker name; do not overwrite another deployment. Init validates `sync: synced`, refuses existing configuration, and creates `.private/host.json`, `.private/browser.json`, and `worker/wrangler.jsonc`. Private files are mode 0600 inside a mode-0700 directory. Never commit or publish `.private/`, never put the host token in Tonk, and never include credentials in a response.
+    
+    4. Explain the access being set up: members holding this space's browser credential can execute shell commands as this machine's user; the working directory is not a sandbox. Use the Cloudflare account the user intends. Inspect `npx wrangler whoami`; if login is needed run `npx wrangler login` and let the user complete authentication. Do not switch accounts silently. New cloud resources or charges should be handled under the user's existing authorization and your applicable approval policy.
+    5. Deploy the provided Worker and install its secrets:
+    
+    ```sh
+    npx wrangler deploy --config worker/wrangler.jsonc
+    node setup.mjs secrets
+    ```
+    
+    The Worker has one Durable Object room and separate host/browser credentials. It rejects connections until secrets are configured. `secrets` supplies both keys to the configured Worker's `wrangler secret bulk` over stdin, never command arguments or console output. Record the URL actually returned by deploy; do not guess the account subdomain. Store it with:
+    
+    ```sh
+    node setup.mjs url https://ACTUAL_WORKER_HOST.workers.dev
+    ```
+    
+    6. Publish the three browser settings atomically through Tonk, then verify their values and `sync: synced`:
+    
+    ```sh
+    node setup.mjs publish
+    ```
+    
+    Existing differing credentials cause a stop. Use `node setup.mjs publish --replace` only when an intentional replacement or fresh clone is established. Stop any host for the target installation before changing its settings so its CLI queue does not compete. Preserve the former private configuration for recovery. Never replace a working connection just because the terminal UI was reloaded.
+    7. Start the local host with `node start.mjs`. Keep it running in a terminal or a background process with a private log and recorded PID. Do not assume a detached process survives reboot; install a launch/login service only when requested. On a second terminal run `node verify.mjs`. It authenticates through the relay, opens a uniquely named temporary shell, prints a marker and `pwd`, verifies the actual output and working directory, and kills only that temporary shell. Open/reload the dashboard terminal and verify it attaches. Host startup alone is not end-to-end success.
+    8. Report the verified result, local package directory, start/stop commands, and any unverified browser or network step. Keep all secrets out of the response.
+    
+    ## Agent operation: diagnose
+    
+    Start with `node setup.mjs doctor`. It checks Node, tmux, node-pty, the bound space and sync, presence of the three relay settings, and the Worker's health endpoint without printing tokens. A health HTTP 200 does not prove authentication. With the host running, use `node verify.mjs` to test the real path.
+    
+    - Missing settings: follow setup. If this was a clone, provision fresh credentials.
+    - Relay authentication rejected: compare the room and browser credential locally against this installation, and verify the Worker secrets. Do not print them or transmit them to any other endpoint.
+    - Relay connected but no host: start this package's `start.mjs` on the intended machine; check its log.
+    - Host already connected: identify the existing owner before stopping or replacing anything. The Worker allows only one host per room.
+    - Host connected but no shell: inspect tmux/node-pty errors and filesystem permissions; verify the configured cwd exists. The host requires tmux >=3.2.
+    - Tonk lock errors: avoid parallel CLI calls; stop the relevant local host briefly before direct maintenance, or use its local serialized admin socket. Preserve tmux sessions.
+    - Blank screen with a passing shell test: reload the terminal/page. Do not rotate working credentials to fix a rendering issue.
+    
+    ## Agent operation: disconnect
+    
+    For a temporary disconnect, Ctrl-C the foreground host or send SIGTERM to its verified PID. This stops relay access while preserving its tmux sessions. Confirm the host is offline; do not kill unrelated Node or tmux processes.
+    
+    For permanent revocation, stop this host first, then remove/rotate BOTH Worker secrets (HOST_TOKEN and BROWSER_TOKEN) and clear only this connection's three `deck/setting` values through `deck/update-setting` after querying their entity IDs. Verify sync. Clearing space settings alone does not revoke a copied key, and updating Worker secrets alone may leave existing sockets alive until their lease expires (up to 45 seconds). Confirm old credentials can no longer connect. Delete the Worker only when the user requests removal of the cloud resource. Preserve or explicitly remove local shell sessions according to the user's request.
+    
+    ## Distributing YAML or cloning a space
+    
+    Include the terminal/setup and terminal/setup-file schemas and records plus the terminal components. Strip session-relay-url, session-relay-room and session-relay-token VALUES from reusable template exports. The embedded package itself is credential-free. Tonk cloning does not provide this package with a clone event, so it cannot automatically invalidate inherited credentials; for a full state clone the setup agent must establish ownership and use fresh pairing. The terminal shows setup instructions when any connection setting is absent, and diagnostic instructions when configured but disconnected.
+    
+    ## References
+    
+    - https://developers.cloudflare.com/workers/wrangler/commands/workers/ (deploy and secret bulk)
+    - https://developers.cloudflare.com/workers/wrangler/commands/general/ (login and whoami)
+    - https://developers.cloudflare.com/workers/wrangler/configuration/ (Worker and Durable Object configuration)
+    
+    The Worker source uses the existing, compatible SQLite Durable Object migration declaration and Wrangler 4.130.0. No deployment is performed just by importing this YAML.
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/config.mjs
+  version: "1.0.0"
+  path: "config.mjs"
+  sha256: "f9f6e907187c3f568aaaa3aec5769e25b50587256c81b1b3c8409f7e0dc61e78"
+  content: |
+    import {readFileSync} from 'node:fs';
+    import {fileURLToPath} from 'node:url';
+    import {resolve,dirname} from 'node:path';
+    import {execFileSync} from 'node:child_process';
+    export const root=dirname(fileURLToPath(import.meta.url));
+    export const configPath=resolve(root,'.private/host.json');
+    export const load=()=>JSON.parse(readFileSync(configPath,'utf8'));
+    export function environment(c){
+     const env={...process.env,TONK_SPACE:c.space};
+     delete env.TONK_NO_SYNC;
+     if(c.stateDir)env.TONK_SPACES_STATE=c.stateDir;else delete env.TONK_SPACES_STATE;
+     return env;
+    }
+    export function tonk(c,args,options={}){
+     return execFileSync(c.tonk||'tonk',['--space',c.space,...args],{cwd:c.cwd,env:environment(c),encoding:'utf8',timeout:90000,maxBuffer:16*1024*1024,...options});
+    }
+    export function endpoint(value){
+     const u=new URL(value);
+     if(u.username||u.password||u.search||u.hash)throw Error('Relay URL cannot include credentials, a query, or fragment');
+     if(u.protocol==='https:')u.protocol='wss:';
+     if(u.protocol!=='wss:'&&!(u.protocol==='ws:'&&['localhost','127.0.0.1'].includes(u.hostname)))throw Error('Use a WSS relay URL');
+     if(u.pathname==='/'||u.pathname==='')u.pathname='/ws';
+     if(u.pathname!=='/ws')throw Error('Relay endpoint must end in /ws');
+     return u.href;
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/start.mjs
+  version: "1.0.0"
+  path: "start.mjs"
+  sha256: "5be8cc887f72cdaf3b9221e0e48df9e044dea703783b1d57fc2f7aa7c392d0cf"
+  content: |
+    import {execFile} from 'node:child_process';
+    import {promisify} from 'node:util';
+    import {hostname,tmpdir} from 'node:os';
+    import {createHash} from 'node:crypto';
+    import {join} from 'node:path';
+    import {load,environment,endpoint} from './config.mjs';
+    import {createHub,createBranchIO} from './agent/hub.mjs';
+    import {startRelayBridge} from './agent/relay-bridge.mjs';
+    if(Number(process.versions.node.split('.')[0])<22)throw Error('Node 22 or newer is required');
+    const c=load();c.url=endpoint(c.url);
+    if(!c.token||!c.room||!c.space||!c.cwd)throw Error('Run setup.mjs init and setup.mjs url first');
+    const env=environment(c);Object.assign(process.env,env);if(!c.stateDir)delete process.env.TONK_SPACES_STATE;
+    delete process.env.TONK_NO_SYNC;
+    process.chdir(c.cwd);
+    const log=m=>console.log(`[${new Date().toISOString()}] ${m}`),run=promisify(execFile);
+    const io=createBranchIO({spot:c.space,syncGapMs:4000,log,runCommand:async(args,{timeoutMs=60000}={})=>(await run(c.tonk||'tonk',['--space',c.space,...args],{cwd:c.cwd,env,timeout:timeoutMs,maxBuffer:16*1024*1024})).stdout});
+    // Room identity, rather than a reusable local space alias, isolates cloned installs.
+    const key=createHash('sha256').update(c.url+'\n'+c.room).digest('hex').slice(0,20);
+    const hub=createHub({io,spot:c.space,ndc:null,terminal:true,terminalCwd:c.cwd,maxSessions:8,agent:hostname(),ns:'tonk-terminal-'+key,socketPath:join(tmpdir(),'tonk-terminal-'+key+'.sock'),log});
+    let bridge,stopping=false,started=false;
+    async function stop(){if(stopping)return;stopping=true;bridge?.close();if(started)await hub.stop();await io.stop();}
+    try{await io.start();await hub.start();started=true;bridge=startRelayBridge({url:c.url,room:c.room,token:c.token,socketPath:hub.socketPath,log});log('Terminal host started. Ctrl-C disconnects it; tmux sessions are retained.');}
+    catch(e){await stop().catch(()=>{});throw e;}
+    for(const signal of ['SIGINT','SIGTERM'])process.on(signal,async()=>{await stop();process.exit(0)});
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/setup.mjs
+  version: "1.0.0"
+  path: "setup.mjs"
+  sha256: "753a4197f1de7d3386dd9f2392aaa7b32ce00dd4a540b2d3676836398c6c1097"
+  content: |
+    import {mkdirSync,writeFileSync,readFileSync,existsSync,chmodSync} from 'node:fs';
+    import {resolve,isAbsolute} from 'node:path';
+    import {randomBytes} from 'node:crypto';
+    import {execFileSync} from 'node:child_process';
+    import {root,configPath,load,tonk,endpoint} from './config.mjs';
+    const [command,...args]=process.argv.slice(2);
+    const option=(name,fallback='')=>{const i=args.indexOf('--'+name);return i<0?fallback:args[i+1]||''};
+    const save=(path,value)=>{writeFileSync(path,JSON.stringify(value,null,2)+'\n',{mode:0o600});chmodSync(path,0o600)};
+    function synced(c){const status=tonk(c,['status']);if(!/^sync: synced\s*$/m.test(status))throw Error('Space has not confirmed sync: synced');return status;}
+    async function main(){
+     if(command==='init'){
+      if(existsSync(configPath)||existsSync(resolve(root,'worker/wrangler.jsonc')))throw Error('Setup already exists. Preserve its credentials; diagnose it or extract a fresh directory for a new space.');
+      const cwd=option('cwd'),space=option('space'),binary=option('tonk','tonk'),stateDir=option('state-dir');
+      if(!cwd||!isAbsolute(cwd)||!existsSync(cwd)||!space||space.startsWith('-'))throw Error('Provide --cwd /absolute/workspace and --space <verified CLI alias>');
+      if(stateDir&&(!isAbsolute(stateDir)||!existsSync(stateDir)))throw Error('--state-dir must be an existing absolute Tonk state directory');
+      const worker=option('worker-name','tonk-terminal-'+randomBytes(6).toString('hex'));
+      if(!/^[a-z][a-z0-9-]{2,55}$/.test(worker))throw Error('Worker name must be 3–56 lowercase letters, digits or hyphens');
+      const c={version:1,url:'',room:'terminal-'+randomBytes(16).toString('hex'),token:randomBytes(32).toString('base64url'),space,cwd,tonk:binary,stateDir};
+      // Validate the CLI binding before generating durable local configuration.
+      process.stdout.write(synced(c));
+      mkdirSync(resolve(root,'.private'),{recursive:true,mode:0o700});chmodSync(resolve(root,'.private'),0o700);
+      save(configPath,c);save(resolve(root,'.private/browser.json'),{token:randomBytes(32).toString('base64url')});
+      save(resolve(root,'worker/wrangler.jsonc'),{name:worker,main:'relay.ts',compatibility_date:'2026-09-01',workers_dev:true,vars:{SESSION_ROOM:c.room},durable_objects:{bindings:[{name:'SESSIONS',class_name:'SessionRoom'}]},migrations:[{tag:'v1',new_sqlite_classes:['SessionRoom']}],ratelimits:[{name:'UPGRADE_LIMITER',namespace_id:'88042',simple:{limit:60,period:60}}]});
+      console.log('Prepared '+worker+'. Private credentials saved locally; nothing deployed or published.');return;
+     }
+     const c=load();
+     if(command==='url'){c.url=endpoint(args[0]);save(configPath,c);console.log('Saved relay endpoint '+c.url);return;}
+     if(command==='secrets'){
+      const browser=JSON.parse(readFileSync(resolve(root,'.private/browser.json'),'utf8'));
+      execFileSync(process.execPath,[resolve(root,'node_modules/wrangler/bin/wrangler.js'),'secret','bulk'],{cwd:resolve(root,'worker'),input:JSON.stringify({HOST_TOKEN:c.token,BROWSER_TOKEN:browser.token}),stdio:['pipe','inherit','inherit']});return;
+     }
+     if(command==='publish'){
+      c.url=endpoint(c.url);const token=JSON.parse(readFileSync(resolve(root,'.private/browser.json'),'utf8')).token;
+      const values={'session-relay-url':c.url,'session-relay-room':c.room,'session-relay-token':token};
+      const rows=JSON.parse(tonk(c,['query','deck/setting','--json']));
+      const changes=[];
+      for(const [name,value]of Object.entries(values)){
+       const found=rows.filter(r=>r.name===name);
+       if(found.length>1)throw Error('Duplicate '+name+' settings; reconcile these through the Tonk CLI first');
+       if(found[0]?.value===value)continue;
+       if(found[0]?.value&&!args.includes('--replace'))throw Error('Existing terminal connection found. Diagnose first; --replace is only for an intentional replacement or clone.');
+       changes.push(found.length?'deck/update-setting!:\n  setting: '+JSON.stringify(found[0].this)+'\n  value: '+JSON.stringify(value):'deck/create-setting!:\n  name: '+JSON.stringify(name)+'\n  value: '+JSON.stringify(value)+'\n  time: '+Date.now());
+      }
+      if(changes.length)tonk(c,['eval','-','-q'],{input:changes.join('\n\n')});
+      const actual=JSON.parse(tonk(c,['query','deck/setting','--json']));
+      for(const [name,value]of Object.entries(values))if(actual.filter(r=>r.name===name&&r.value===value).length!==1)throw Error('Setting verification failed: '+name);
+      synced(c);console.log('Relay settings verified; sync: synced. Host credential remains local.');return;
+     }
+     if(command==='doctor'){
+      console.log('Node '+process.versions.node+'; workspace '+c.cwd+'; space '+c.space);
+      if(Number(process.versions.node.split('.')[0])<22)throw Error('Node 22+ required');
+      const tmux=existsSync('/opt/homebrew/bin/tmux')?'/opt/homebrew/bin/tmux':'tmux';console.log(execFileSync(tmux,['-V'],{encoding:'utf8'}).trim());
+      await import('node-pty');console.log('node-pty loads');process.stdout.write(synced(c));
+      const rows=JSON.parse(tonk(c,['query','deck/setting','--json']));
+      console.log('Space relay fields: '+['url','room','token'].map(k=>k+'='+(rows.some(r=>r.name==='session-relay-'+k&&r.value)?'present':'missing')).join(', '));
+      if(c.url){const u=new URL(endpoint(c.url));u.protocol=u.protocol==='wss:'?'https:':'http:';u.pathname='/health';const r=await fetch(u,{signal:AbortSignal.timeout(10000)});console.log('Relay health HTTP '+r.status);if(!r.ok)process.exitCode=1;}
+      console.log('Run node verify.mjs with the host running to check authentication and actual shell I/O.');return;
+     }
+     throw Error('Commands: init --cwd /workspace --space alias [--state-dir /path] [--tonk /binary] [--worker-name name], url <wss-endpoint>, secrets, publish [--replace], doctor');
+    }
+    main().catch(e=>{console.error(e.message);process.exitCode=1});
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/verify.mjs
+  version: "1.0.0"
+  path: "verify.mjs"
+  sha256: "1b173af5f5189a6d3865a95addf7f5c9c5a8a4c5995870acb6a593e80c5b0545"
+  content: |
+    import {readFileSync} from 'node:fs';
+    import {resolve} from 'node:path';
+    import {randomBytes} from 'node:crypto';
+    import {load,root,endpoint} from './config.mjs';
+    import {connectSession} from './session/relay-client.mjs';
+    const c=load(),token=JSON.parse(readFileSync(resolve(root,'.private/browser.json'),'utf8')).token;
+    const session='setup-check-'+randomBytes(8).toString('hex');let output='',status='',hello=false,opened=false,exited=false;
+    const link=connectSession({url:endpoint(c.url),room:c.room,token,role:'browser',onStatus:s=>{status=s},onMessage:m=>{const f=m.data;if(m.type!=='data')return;if(f.t==='hello')hello=true;if(f.session!==session)return;if(f.t==='term-out')output+=Buffer.from(f.d,'base64').toString('utf8');if(f.t==='term-exit')exited=true;if(f.t==='term-deny')status='denied: '+(f.reason||'terminal unavailable')}});
+    const send=data=>{if(!link.send({type:'data',data}))throw Error('Relay unavailable: '+status)};
+    const wait=async(fn,label)=>{const deadline=Date.now()+20000;while(!fn()){if(Date.now()>deadline)throw Error(label+' timed out ('+status+')');await new Promise(r=>setTimeout(r,50))}};
+    try{
+     await wait(()=>hello,'Host greeting');send({t:'term-open',session,cols:100,rows:24});opened=true;
+     await wait(()=>output.length>0,'Shell output');
+     send({t:'term-in',session,d:Buffer.from("printf '\\nTONK_%s\\n' 'SETUP_OK'; pwd\n").toString('base64')});
+     await wait(()=>output.includes('TONK_SETUP_OK')&&output.includes(c.cwd),'Shell command and working directory');
+     send({t:'term-kill',session});await wait(()=>exited,'Temporary shell cleanup');opened=false;
+     console.log('PASS: relay authentication, host greeting, shell input/output, working directory, temporary shell cleanup.');
+    }catch(e){console.error(e.message);process.exitCode=1}finally{if(opened)link.send({type:'data',data:{t:'term-kill',session}});link.close()}
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/extract.mjs
+  version: "1.0.0"
+  path: "extract.mjs"
+  sha256: "f52838858302caf187747452a061037f62aef93ba31649188500fbd3c18014d7"
+  content: |
+    // Read a JSON object with {setup: <terminal/setup rows>, files: <terminal/setup-file rows>}.
+    // Validates every entry before creating a fresh directory. Never overwrites a checkout.
+    import {readFileSync,mkdirSync,writeFileSync,existsSync} from 'node:fs';
+    import {resolve,dirname} from 'node:path';
+    import {createHash} from 'node:crypto';
+    const input=JSON.parse(readFileSync(0,'utf8'));
+    const setup=input.setup.find(r=>r.this==='id:terminal/setup');
+    if(!setup)throw Error('Missing id:terminal/setup');
+    const manifest=JSON.parse(setup.manifest),expected=new Map(manifest.map(f=>[f.path,f]));
+    const rows=input.files.filter(f=>f.version===setup.version);
+    if(rows.length!==expected.size)throw Error('File count mismatch');
+    const seen=new Set();
+    for(const f of rows){
+     if(!/^[a-zA-Z0-9_.\/-]+$/.test(f.path)||f.path.startsWith('/')||f.path.split('/').some(p=>!p||p==='.'||p==='..')||seen.has(f.path))throw Error('Unsafe or duplicate path');
+     const want=expected.get(f.path),hash=createHash('sha256').update(f.content).digest('hex');
+     if(!want||hash!==want.sha256||hash!==f.sha256||Buffer.byteLength(f.content)!==want.bytes)throw Error('Integrity mismatch: '+f.path);
+     seen.add(f.path);
+    }
+    if(!process.argv[2])throw Error('Pass a fresh destination directory');
+    const dest=resolve(process.argv[2]);if(existsSync(dest))throw Error('Destination already exists; choose a fresh directory');
+    mkdirSync(dest,{mode:0o700});
+    for(const f of rows){const path=resolve(dest,f.path);mkdirSync(dirname(path),{recursive:true,mode:0o700});writeFileSync(path,f.content,{flag:'wx',mode:0o600})}
+    console.log('Extracted terminal setup '+setup.version+' ('+rows.length+' verified files) into '+dest);
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/hub.mjs
+  version: "1.0.0"
+  path: "agent/hub.mjs"
+  sha256: "c3286cf926908579f507ba3d6a219bc705d07927aa3d4488c8468d1c16303b69"
+  content: |
+    #!/usr/bin/env bun
+    // hub.mjs — Live wire v2's switchboard (SPEC §7/§10/§13; docs/PROTOCOL.md
+    // is the normative contract for every frame, op, and row here).
+    //
+    //   bun agent/hub.mjs --spot goblin-mode [--terminal]
+    //        [--terminal-shell /bin/zsh] [--terminal-cwd ~/x]
+    //        [--turn turn:host:3478] [--max-sessions 8] [--agent name]
+    //
+    // One process, five duties, none of them chat-aware:
+    //   · answerer   — polls rtc/signal for kind:call rows, auto-answers each
+    //                  fresh one (libdatachannel answers on setRemoteDescription
+    //                  alone), publishes the accept, reaps the silent, sweeps
+    //                  the stale. Steady state of a healthy spot: zero rows.
+    //   · socket door— ${TMPDIR}/tonk-hub-<spot>.sock, NDJSON; ops (c:) are
+    //                  management, frames (t:) enter the same bus as card
+    //                  frames. This is the responder's and live.mjs's door.
+    //                  The ops include the BRANCH DOOR (assert/query/sync):
+    //                  a spot's local store is single-writer, so the hub is
+    //                  the only process that may run `tonk` against it and
+    //                  every other local process asks the hub instead.
+    //   · bus        — term-* to the broker; ping/pong terminated here;
+    //                  everything else forwarded VERBATIM: consumer frames to
+    //                  services, service frames to consumers. Never parsed.
+    //   · broker     — one term-open = one tmux client under a PTY in the
+    //                  pty-host child (node, never bun), scoped to
+    //                  (connection, session); term-out only to attached
+    //                  connections; close detaches, kill ends.
+    //   · projection — `tmux -L tonk-<spot> ls` every ~2s reconciled into
+    //                  term/session facts (named entities, hub = only writer).
+    //                  There is NO periodic heartbeat: every branch write here
+    //                  is event-driven, because write cadence — not payload —
+    //                  is what grew the store 20 GB in three days
+    //                  (docs/POSTMORTEM-2026-08-08.md). Liveness is proven by
+    //                  the wire itself: slots are swept at boot and retracted
+    //                  on shutdown, so a rendered slot row is the "a hub is
+    //                  here" signal the beat used to be.
+    //
+    // Restart freely: sessions live in tmux, chat lives on the branch, and
+    // every connection re-establishes from the caller's side. Nothing here
+    // may average those guarantees together.
+    
+    import net from "node:net";
+    import { spawn, execFile, execFileSync } from "node:child_process";
+    import { createInterface } from "node:readline";
+    import { accessSync, constants, existsSync, unlinkSync } from "node:fs";
+    import { tmpdir, hostname, networkInterfaces } from "node:os";
+    import { delimiter, dirname, join, resolve as pathResolve } from "node:path";
+    import { fileURLToPath } from "node:url";
+    import { createRequire } from 'node:module';
+    import { configureTerminalNamespace, terminalEnvironment } from './terminal-config.mjs';
+    import { terminalTitle } from './terminal-title.mjs';
+    
+    // The one native dependency; optional so a socket-only hub still runs.
+    let ndc = null;
+    try { ndc = (await import("node-datachannel")).default; } catch { /* warned in start() */ }
+    
+    // ---- tiny helpers -----------------------------------------------------
+    
+    const hhmmss = () => new Date().toTimeString().slice(0, 8);
+    const defaultLog = (m) => console.log(`[${hhmmss()}] ${m}`);
+    
+    // asserted-notation string literal (ported from tonk-agent.mjs): the doc
+    // is one -c argument, so real newlines must become \n escapes. Backslash
+    // and quote first; order matters.
+    export const q = (s) =>
+      `"${String(s)
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\t/g, "\\t")}"`;
+    
+    const clamp = (n, lo, hi, dflt) => {
+      const v = Math.round(Number(n));
+      return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt;
+    };
+    
+    const KEY_RE = /^[a-z0-9-]+$/;          // PROTOCOL §1: every key input
+    const CONCEPT_RE = /^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$/i;   // `chat/message`, `term/session`
+    const MAX_NOTATION = 1 << 20;           // 1MB of asserted notation per assert op
+    const mintKey = () => `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    
+    export function shortHostname() {
+      try { return (hostname() || "hub").split(".")[0]; } catch { return "hub"; }
+    }
+    
+    function parseArgs(argv) {
+      const FLAGS = { terminal: "terminal", "no-sync": "noSync" };
+      const out = {};
+      for (let i = 0; i < argv.length; i++) {
+        const a = argv[i];
+        if (!a.startsWith("--")) continue;
+        const key = a.slice(2);
+        if (FLAGS[key]) { out[FLAGS[key]] = true; continue; }
+        out[key] = argv[++i];
+      }
+      return out;
+    }
+    const numArg = (v, d) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : d; };
+    
+    // tmux via PATH with the known homebrew fallback (same as pty-host.mjs).
+    function resolveTmux() {
+      const dirs = (process.env.PATH || "").split(delimiter).filter(Boolean);
+      dirs.push("/opt/homebrew/bin");
+      for (const d of dirs) {
+        const p = join(d, "tmux");
+        try { accessSync(p, constants.X_OK); return p; } catch { /* keep looking */ }
+      }
+      return null;
+    }
+    
+    // The pty-host child must run under NODE (node-pty ENXIOs under bun).
+    function resolveNode() {
+      if (!process.versions.bun) return process.execPath;
+      const dirs = (process.env.PATH || "").split(delimiter).filter(Boolean);
+      dirs.push("/opt/homebrew/bin");
+      for (const d of dirs) {
+        const p = join(d, "node");
+        try { accessSync(p, constants.X_OK); return p; } catch { /* keep looking */ }
+      }
+      return null;
+    }
+    
+    // SPEC §4: tmux ≥3.2 or --terminal is refused loudly at boot.
+    function tmuxCheck(TMUX) {
+      if (!TMUX) return { ok: false, why: "tmux not found (PATH + /opt/homebrew/bin)" };
+      let out;
+      try { out = execFileSync(TMUX, ["-V"], { stdio: ["ignore", "pipe", "pipe"] }).toString().trim(); }
+      catch (e) { return { ok: false, why: `tmux -V failed: ${e.message}` }; }
+      const m = out.match(/(\d+)\.(\d+)/);
+      if (m) {
+        const maj = Number(m[1]), min = Number(m[2]);
+        if (maj < 3 || (maj === 3 && min < 2))
+          return { ok: false, why: `${out} is older than 3.2 (need modern attach/redraw semantics)` };
+      }
+      return { ok: true, version: out, why: null };
+    }
+    
+    // ---- branch I/O seam --------------------------------------------------
+    // Everything the hub says to or hears from the branch goes through this
+    // object, so the harness can stub it wholesale. The real one is ported
+    // from tonk-agent.mjs: single-flighted tonk CLI for reads, writes and network
+    // syncs, with bounded local batches and one sync loop that owns
+    // pull/push (a healthy push measured 48s wall on this store 2026-08-07 —
+    // NOT the ~8s the first version assumed — so it is batched, gated, and
+    // backed off on failure; publishNow jumps the queue for rows a caller is
+    // actively waiting on).
+    
+    export function createBranchIO({ spot, log = defaultLog, syncGapMs = 1200, beatPushMs = 30000, noSync = false, runCommand } = {}) {
+      const cli = runCommand ? null : createRequire(import.meta.url).resolve(
+        `@tonk/cli-${process.platform}-${process.arch}/bin/${process.platform === 'win32' ? 'tonk.exe' : 'tonk'}`);
+      function runTonk(argv, { timeoutMs = 60000 } = {}) {
+        if (runCommand) return runCommand(argv, { timeoutMs });
+        return new Promise((resolveP, rejectP) => {
+          // Use this repository's pinned staging CLI, without npx startup or fetching.
+          // Spawn the installed native binary itself so timeout signals reach it,
+          // rather than killing a JS launcher and leaving its native child running.
+          const proc = spawn(cli, argv, {
+            stdio: ["ignore", "pipe", "pipe"],
+            // TONK_SPOT works across CLI versions; --spot was dropped in 0.6.5.
+            env: spot ? { ...process.env, TONK_SPACE: spot } : process.env,
+          });
+          let out = "", err = "", killed = false;
+          proc.stdout.on("data", (d) => { out += d; });
+          proc.stderr.on("data", (d) => { err += d; });
+          const killer = setTimeout(() => { killed = true; try { proc.kill(); } catch { /* gone */ } }, timeoutMs);
+          proc.on("error", (e) => { clearTimeout(killer); rejectP(new Error(`tonk ${argv[0]}: ${e.message}`)); });
+          proc.on("close", (code) => {
+            clearTimeout(killer);
+            // A killed CLI usually produced NO output, and the old message was
+            // therefore empty — "push failed: " told nobody that the real
+            // problem was a 48s push against a 45s timeout (2026-08-07).
+            if (killed) rejectP(new Error(`tonk ${argv[0]}: killed after ${Math.round(timeoutMs / 1000)}s (CLI still running — timeout too short for this store?)`));
+            else if (code !== 0) rejectP(new Error(`tonk ${argv.slice(0, 2).join(" ")}: ${(err || out).trim().slice(0, 300) || `exit ${code} with no output`}`));
+            else resolveP(out);
+          });
+        });
+      }
+    
+      // WRITE/NETWORK lane: strictly serialized. A spot's local store is
+      // single-writer, and pull/push move the same state the writes touch.
+      let chain = Promise.resolve();
+      function enqueue(run) {
+        const result = chain.then(run, run);   // serialized; one failure never wedges the next
+        chain = result.then(() => {}, () => {});
+        return result;
+      }
+      const tonk = (argv, opts) => enqueue(() => runTonk(argv, opts));
+    
+      // The September staging CLI refreshes native signing-session state even
+      // when opening a space for a query. Reads therefore share the write/sync
+      // queue; a separate read lane races the account-store lock.
+      const tonkRead = (argv, opts) => tonk(argv, opts);
+    
+      const evalLocal = (doc) => tonk(["eval", "-q", "--no-sync", "-c", doc]);
+    
+      // tonk 0.6.5 returns a flat array; older CLIs wrap rows in
+      // matches_after[].results[].fields. Read both (the old parse on the new
+      // CLI silently yields [] — the "no cards on the board" bug).
+      async function readQuery(run, concept) {
+        const out = await run(["query", concept, "--json"]);
+        const doc = JSON.parse(out);
+        if (Array.isArray(doc)) return doc;
+        const rows = [];
+        for (const m of doc.matches_after ?? [])
+          for (const r of m.results ?? []) rows.push({ this: r.this, ...(r.fields ?? {}) });
+        return rows;
+      }
+      const query = concept => readQuery(tonkRead, concept);
+    
+      async function readMany(run, shapes) {
+        if (!shapes || Array.isArray(shapes) || typeof shapes !== 'object') throw new Error('Invalid query shapes');
+        const concepts = Object.keys(shapes);
+        if (concepts.some(c => !/^[a-zA-Z0-9_./-]+$/.test(c) || !Array.isArray(shapes[c]) ||
+          shapes[c].some(f => typeof f !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(f) || f === 'this'))) throw new Error('Invalid query concepts');
+        // Keep legacy/admin query groups independent. Native 0.6.15 rejects bare
+        // heads; even `concept: {}` heads (including separate YAML documents) join
+        // implicitly and can omit closed instances. The isolated parity test
+        // catches this. Protocol-2 browser language commands never call this path.
+        const rows = {};
+        for (const concept of concepts) rows[concept] = await readQuery(run, concept);
+        return rows;
+      }
+      const queryMany = shapes => localBatch(local => local.queryMany(shapes));
+    
+      // Reserve one position in the native-store queue. Syncs and other callers
+      // cannot interleave these local operations. Never await a model/network call
+      // here or call the outer io.query/evalLocal from a batch (it would deadlock).
+      // The scoped facade serializes even accidentally concurrent local calls.
+      const localBatch = fn => enqueue(async () => {
+        let active = true, localChain = Promise.resolve();
+        const run = (argv, opts) => {
+          if (!active) return Promise.reject(new Error('Local batch is closed'));
+          const result = localChain.then(() => runTonk(argv, opts));
+          localChain = result.then(() => {}, () => {});
+          return result;
+        };
+        try {
+          return await fn({ query: concept => readQuery(run, concept), queryMany: concepts => readMany(run, concepts),
+            evalLocal: doc => run(['eval', '-q', '--no-sync', '-c', doc]) });
+        } finally { active = false; await localChain; }
+      });
+    
+      let stopFlag = false, dirty = false, publishReq = false, wakeFn = null, foreground = 0;
+      const wake = () => { if (wakeFn) { const w = wakeFn; wakeFn = null; w(); } };
+      const markDirty = () => { dirty = true; };
+      const publishNow = () => { publishReq = true; wake(); };
+      // Do not begin a background network round-trip between a language snapshot
+      // and its commit. Already-running native operations must finish safely.
+      // Release on every exit; stop ignores leases so shutdown can still flush.
+      const deferSync = () => {
+        foreground++;
+        let released = false;
+        return () => { if (!released) { released = true; foreground--; wake(); } };
+      };
+    
+      const conflict = (e) => /non-fast-forward|Version mismatch|expected .*got|upstream has moved/i.test(String(e));
+    
+      // A healthy push on this store is ~48s of wall clock (measured
+      // 2026-08-07, no-op push included). The old 45s timeout therefore
+      // KILLED EVERY PUSH — the spot sat diverged for five hours while the
+      // hub hummed along locally, and warn-once meant the log said so exactly
+      // one time, with an empty error. Design rule (RENDEZVOUS-V3 §1) applies
+      // to the CLI too: assume the branch is slow, permanently.
+      const SYNC_TIMEOUT_MS = 150000;
+    
+      // Sync health, always current, surfaced in the hb: line and by
+      // io.health(). Failure gets a BACKOFF: a sync that is failing after a
+      // long timeout would otherwise jam the write lane for its full timeout
+      // every loop iteration, and every local writer queues behind that jam —
+      // which is how a broken RELAY starved the LOCAL handshake path.
+      const health = {
+        pull: { okAt: 0, failAt: 0, streak: 0, error: "" },
+        push: { okAt: 0, failAt: 0, streak: 0, error: "" },
+      };
+      const backoffUntil = { pull: 0, push: 0 };
+      const failBackoffMs = (name, streak) =>
+        Math.min((name === "pull" ? 30000 : 60000) * 2 ** Math.max(0, streak - 1), 600000);
+    
+      function syncOk(name) {
+        const h = health[name];
+        if (h.streak) log(`${name} recovered after ${h.streak} failure(s)`);
+        h.okAt = Date.now(); h.streak = 0; h.error = "";
+        backoffUntil[name] = 0;
+        return true;
+      }
+      function syncFailed(name, e) {
+        const h = health[name];
+        h.failAt = Date.now(); h.streak += 1; h.error = String(e.message || e);
+        backoffUntil[name] = Date.now() + failBackoffMs(name, h.streak);
+        // First failure and every 10th — with the real error. Warn-once buried
+        // a five-hour outage.
+        if (h.streak === 1 || h.streak % 10 === 0)
+          log(`${name} failing (x${h.streak}), continuing on the local branch: ${h.error}`);
+        return false;
+      }
+    
+      async function doSync(name) {
+        if (noSync) return true;
+        const attempt = verb => enqueue(async () => {
+          if (foreground && !stopFlag) return false;
+          await runTonk([verb], { timeoutMs: SYNC_TIMEOUT_MS });
+          return true;
+        });
+        try {
+          if (!await attempt(name)) return null; // deferred, not a sync failure
+          return syncOk(name);
+        } catch (e) {
+          // A push that lost a race with the remote surfaces as a conflict:
+          // merge and retry. The browser writes to this same branch — every
+          // row a card publishes moves the upstream — so a push that carries
+          // a row a card is actively waiting on is the most likely one to
+          // collide. Retrying once was not enough (measured 2026-08-05), so:
+          // three tries with a short gap, then leave it to the loop.
+          let err = e;
+          if (name === "push" && conflict(err) && !stopFlag) {
+            for (let i = 0; i < 3; i++) {
+              try {
+                if (!await attempt('pull') || !await attempt('push')) return null;
+                return syncOk(name);
+              } catch (again) {
+                err = again;
+                if (!conflict(again)) break;              // a real error, not a race
+                await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+              }
+            }
+          }
+          return syncFailed(name, err);
+        }
+      }
+      const syncOnce = async () => { await doSync("pull"); if (dirty) { dirty = false; if (await doSync("push") === null) dirty = true; } };
+    
+      async function loop() {
+        let lastPush = 0;
+        while (!stopFlag) {
+          try {
+            // PULL FIRST, always. Answer rows arrive only by pulling, and a
+            // pull is ~5s where a push is ~48s — two publishNow pushes queued
+            // back-to-back once held ingestion off for 100s+ (measured
+            // 2026-08-08), which is longer than Chrome actively runs ICE
+            // checks. A caller waiting on a push loses 5s here; a caller
+            // waiting on a PULL loses the whole attempt.
+            if (Date.now() >= backoffUntil.pull)
+              await doSync("pull");
+            if (publishReq) {           // a row a caller is waiting on.
+              // publishNow bypasses the failure backoff — one urgent try is
+              // worth it — but a failure here re-arms the backoff, so a dead
+              // relay cannot be hammered through this door either.
+              publishReq = false; dirty = false; lastPush = Date.now();
+              if (await doSync("push") === null) { publishReq = true; dirty = true; }
+            }
+            if (dirty && Date.now() - lastPush > beatPushMs && Date.now() >= backoffUntil.push) {
+              dirty = false; lastPush = Date.now();
+              if (await doSync("push") === null) dirty = true; // projection etc., coalesced
+            }
+          } catch (e) { if (process.env.DEBUG_TONK) log(`sync error: ${e.message}`); }
+          await new Promise((res) => { wakeFn = res; setTimeout(wake, syncGapMs); });
+        }
+      }
+    
+      let loopP = null;
+      return {
+        query, queryMany, evalLocal, deferSync, localBatch, markDirty, publishNow,
+        health: () => ({ pull: { ...health.pull }, push: { ...health.push } }),
+        async start() { await syncOnce(); loopP = loop(); },
+        async stop() {
+          stopFlag = true; wake();
+          await syncOnce();             // flush the shutdown retractions
+          await Promise.race([loopP ?? Promise.resolve(), new Promise((r) => setTimeout(r, 6000))]);
+        },
+      };
+    }
+    
+    // ---- the hub ----------------------------------------------------------
+    
+    export function createHub(opts) {
+      const {
+        io, spot,
+        agent = shortHostname(),
+        terminal = false,
+        terminalShell = process.env.SHELL || "/bin/sh",
+        terminalCwd = process.env.HOME || "/",
+        turn = null,
+        maxSessions = 0,                     // 0 = uncapped
+        iceServers = ["stun:stun.l.google.com:19302"],   // host+STUN always (SPEC §5)
+        ndc: ndcOpt = ndc,
+        rtcPollMs = 1500,
+        projectionMs = 2000,
+        sessionsMs = 1000,                   // live session list; a tmux ls, no branch I/O
+        // NO heartbeatMs any more. The hub's periodic agent/presence beat was
+        // removed 2026-08-09: even at 30s it cost ~2 blocks/min forever (a
+        // commit rewrites the Merkle path regardless of payload — the 4s beats
+        // wrote this spot to 19.75 GB in two days; POSTMORTEM-2026-08-08). Its
+        // job — telling a tab "a hub is behind these slots" — is carried by the
+        // slot lifecycle instead: boot sweeps every rtc/signal row and mints
+        // fresh ids, shutdown retracts them, and the wire spends at most one
+        // answer row per rendered slot (tonk-wire's spentSlots), so even a
+        // crashed hub's leftover slots cost a bounded handful of writes, once.
+        hbLogMs = 60000,
+        // How many unanswered offers to keep published. Deliberately not a
+        // timeout — v3 has none on this path, because an unanswered offer does
+        // not decay (RENDEZVOUS-V3 §2). It is a redundancy: enough that several
+        // tabs can open at once without waiting a sync round for a replacement,
+        // small enough that the pool is a handful of idle sockets.
+        slotPool = 3,
+        gatherCapMs = 20000,
+        pingMs = 15000,                      // PROTOCOL §2.1, run in reverse
+        pingMisses = 2,                      // 2 unanswered pings = dead peer
+        retainExitedMs = 24 * 3600 * 1000,
+        seenEpsMs = 60000,                   // `seen` drift worth a row rewrite
+        openTimeoutMs = 10000,
+        ns = `tonk-${spot}`,
+        socketPath = join(tmpdir(), `tonk-hub-${spot}.sock`),
+        ptyHostPath = join(dirname(fileURLToPath(import.meta.url)), "pty-host.mjs"),
+        log = defaultLog,
+      } = opts;
+      if (!io) throw new Error("createHub: io (branch seam) is required");
+      if (!spot) throw new Error("createHub: spot is required");
+    
+      const TMUX = resolveTmux();
+      const tmuxInfo = tmuxCheck(TMUX);
+    
+      // conn record: { id, kind:'rtc'|'socket', role:'consumer'|'service',
+      //   serveName, serveSeq, attachments: Map<session, clientId>, dead,
+      //   rtc: pc/dc/state/at/reapTimer/pingWait/lastPong · socket: sock/buf }
+      const conns = new Map();
+      // This hub INSTANCE. Slot ids carry it, so a slot published by a hub
+      // that has since died is recognisably not ours and gets swept instead of
+      // luring a tab into answering a PeerConnection that no longer exists.
+      const hubId = `s${Math.random().toString(36).slice(2, 8)}`;
+      const counters = { slots: 0, answers: 0, opens: 0, closes: 0, sweeps: 0, stale: 0 };
+      const originHints = new Map();         // session key -> deck | socket:<client>
+      const titleHints = new Map();          // session key -> creator-set title
+      const titleLocked = new Set();
+      // Sessions killed ON REQUEST (a deck menu, the `kill` op, term-kill).
+      // The projection retracts their rows outright instead of marking them
+      // exited and holding them for `retainExitedMs` — a kill means "make
+      // this go away", and a list of things to kill must not keep the corpse.
+      // A shell that ends on its own (you typed `exit`) is NOT in here and
+      // still ages out normally, so its scrollback stays resurrectable.
+      const killedForget = new Set();
+      let stopping = false;
+      let sockSeq = 0, serveSeq = 0;
+      const timers = new Set();
+      let server = null;
+    
+      // ---- the branch door (PROTOCOL §4: assert / query / sync) -----------
+      // A spot's local store is SINGLE-WRITER. Two processes running `tonk`
+      // against it produce "Lock error: Concurrent write in progress",
+      // "Version mismatch" and non-fast-forward pushes — measured in
+      // production at 26 failures here and 64 in the responder inside 90
+      // minutes, which broke the handshake itself (the branch IS the
+      // signalling channel: an accept row that never arrived, another that
+      // took 20s instead of 2s). So the hub owns the CLI and every other
+      // local process asks it. Client work joins the SAME single-flighted
+      // chain the answerer, projection and beat write through — this queue
+      // only fixes arrival order (and keeps the ordering true even when the
+      // io seam is a stub); there is no second CLI path anywhere.
+      let branchChain = Promise.resolve();
+      function branchOp(fn) {
+        const run = () => fn();
+        const result = branchChain.then(run, run);   // one failure never wedges the next
+        branchChain = result.then(() => {}, () => {});
+        return result;
+      }
+      const languageCommands = opts.createLanguageService?.({ io, exclusive: branchOp });
+    
+      // ---- send / broadcast ----------------------------------------------
+    
+      function sendRaw(rec, s) {
+        if (rec.dead) return;
+        try {
+          if (rec.kind === "rtc") { if (rec.dc) rec.dc.sendMessage(s); }
+          else rec.sock.write(s + "\n");
+        } catch { /* connection mid-death */ }
+      }
+      const sendFrame = (rec, obj) => sendRaw(rec, JSON.stringify(obj));
+      const consumers = () => [...conns.values()].filter((c) => c.role === "consumer");
+      const services = () =>
+        [...conns.values()].filter((c) => c.role === "service").sort((a, b) => a.serveSeq - b.serveSeq);
+      const serviceList = () => services().map((c) => c.serveName);   // attach order (§2.1)
+    
+      function broadcastServices() {
+        const frame = JSON.stringify({ t: "services", services: serviceList() });
+        for (const c of consumers()) sendRaw(c, frame);
+      }
+    
+      // ---- the session registry, pushed (not synced) ----------------------
+      // The browser used to learn which sessions exist ONLY from rendered
+      // term/session rows off the branch. That is a projection write, then a
+      // ~48s push, then the tab's pull — one to three minutes. So a session
+      // created seconds ago was missing from the deck's launcher and from the
+      // terminal card's session menu, and one killed seconds ago was still
+      // listed there, still reading `running`. Both were reported as bugs and
+      // both are the same fact: a LIVE list cannot be delivered by a slow
+      // durable channel. The branch rows stay (they are the durable registry,
+      // and the offline fallback); this frame is the live one, and the wire
+      // already exists. Sent on greet and whenever the projection changes.
+      //
+      // Named `sessions`, deliberately NOT `term-sessions`: receivers route
+      // every `term-*` frame by prefix to their per-session terminal handler
+      // (PROTOCOL §2.3, keyed on `session`), so the first name made this
+      // frame unreachable in the browser — broadcast fine, parsed by nobody,
+      // stale menu, no error. This is a registry-wide announcement, sibling
+      // to `services`, and it is named like one.
+      const sessionList = () => [...proj.state.values()].map((r) => ({
+        key: r.key, title: r.title, origin: r.origin, status: r.status,
+        born: r.born, seen: r.seen,
+      }));
+      // The last list actually sent, and its signature. BOTH are needed: the
+      // signature suppresses repeat broadcasts, and the rows are what a
+      // newly-connected tab must be greeted with. Greeting from
+      // `sessionList()` instead (the durable projection) shipped a DIFFERENT,
+      // staler list than every other consumer had — and because the gate then
+      // saw no change, that tab was never corrected. Measured 2026-08-08: a
+      // session created 25s earlier was live in the broadcast and missing
+      // from the greet, so the menu sat wrong indefinitely.
+      let lastSessionsSig = null;
+      let lastSessionsRows = null;
+      function broadcastSessions(list) {
+        const rows = list || sessionList();
+        // `seen` drifts every keystroke; signature on what a reader acts on.
+        const sig = rows.map((s) => s.key + "|" + s.status + "|" + s.title).join("\n");
+        lastSessionsRows = rows;
+        if (sig === lastSessionsSig) return;
+        lastSessionsSig = sig;
+        const frame = JSON.stringify({ t: "sessions", sessions: rows });
+        for (const c of consumers()) sendRaw(c, frame);
+      }
+    
+      // hello MUST precede every other frame on a connection (PROTOCOL §2.1).
+      const sessionLabels = new Map();
+      function greet(rec) {
+        sendFrame(rec, { t: "hello", agent, proto: 2 });
+        sendFrame(rec, { t: "services", services: serviceList() });
+        // The registry, immediately — a tab that just connected must not wait
+        // for the next change to learn what exists. The SAME rows everyone
+        // else last got, never a separately-computed one.
+        sendFrame(rec, { t: "sessions", sessions: lastSessionsRows || sessionList() });
+        sendFrame(rec, { t: 'session-labels', labels: [...sessionLabels.values()] });
+        sendFrame(rec, { t: 'language-capability', enabled: !!languageCommands, ...languageCommands?.capability });
+      }
+    
+      async function renameSession(rec, frame) {
+        const { kind, key } = frame;
+        const title = typeof frame.title === 'string' ? frame.title.trim() : '';
+        if (!['chat', 'terminal'].includes(kind) || typeof key !== 'string' || !KEY_RE.test(key) || !title || title.length > 120) {
+          sendFrame(rec, { t: 'session-label-error', id: frame.id, error: 'Use a name between 1 and 120 characters.' }); return;
+        }
+        try {
+          await branchOp(async () => {
+            await io.evalLocal(`session/label!:\n  this: id:session/label/${kind}/${key}\n  kind: ${JSON.stringify(kind)}\n  key: ${JSON.stringify(key)}\n  title: ${JSON.stringify(title)}\n`);
+            io.markDirty();
+          });
+          sessionLabels.set(`${kind}:${key}`, { kind, key, title });
+          for (const consumer of consumers()) sendFrame(consumer, { t: 'session-labels', labels: [...sessionLabels.values()] });
+          io.publishNow();
+          sessionsTick().catch(() => {});
+        } catch {
+          sendFrame(rec, { t: 'session-label-error', id: frame.id, error: 'Could not save this name. Try again.' });
+        }
+      }
+    
+      // ---- bus (PROTOCOL §3) ---------------------------------------------
+    
+      function routeFrame(rec, frame, raw) {
+        const ty = frame.t;
+        // Private request/response lane. Never broadcast language input or results
+        // to other consumers or service processes, even if a service spoofs a frame.
+        if (ty.startsWith('language-')) {
+          if (rec.role === 'consumer' && languageCommands) {
+            languageCommands.handle(rec.id, frame, response => sendFrame(rec, response)).catch(() => {});
+          } else if (rec.role === 'consumer' && ty === 'language-submit') {
+            sendFrame(rec, { t: 'language-result', id: frame.id, status: 'error', message: 'Language commands are not enabled on this host.' });
+          }
+          return;
+        }
+        if (ty === "ping") { sendFrame(rec, { t: "pong", at: frame.at }); return; }
+        if (ty === "pong") { rec.pingWait = 0; rec.lastPong = Date.now(); return; }   // absorbed; liveness
+        if (ty === 'session-rename' && rec.role === 'consumer') { renameSession(rec, frame); return; }
+        if (ty.startsWith("term-")) { broker.handle(rec, frame); return; }
+        // conv-open / conv-close relay to the services like anything else, but
+        // the hub REMEMBERS them, scoped to this connection exactly as terminal
+        // attachments are (§2.3). A card that vanishes without saying goodbye —
+        // a closed tab, a dead datachannel — must not leave a responder holding
+        // a conversation open forever, and only the hub knows the connection
+        // died. Falls through to the relay below.
+        if ((ty === "conv-open" || ty === "conv-close") && frame.thread &&
+            rec.role === "consumer") {
+          if (ty === "conv-open") rec.convs.add(String(frame.thread));
+          else rec.convs.delete(String(frame.thread));
+        }
+        // Verbatim: the received text itself is forwarded, never re-serialized.
+        const targets = rec.role === "service" ? consumers() : services();
+        for (const tgt of targets) if (tgt !== rec) sendRaw(tgt, raw);
+      }
+    
+      // Tell the services a dying connection's conversations are released —
+      // but only the ones no OTHER live consumer is still showing. Two cards
+      // on one conversation is ordinary (a second card, a second tab), and one
+      // of them closing must not tell the responder to stop holding it.
+      function releaseConvs(rec) {
+        if (!rec.convs || !rec.convs.size) return;
+        const held = new Set();
+        for (const c of conns.values()) {
+          if (c === rec || c.dead || c.role !== "consumer" || !c.convs) continue;
+          for (const th of c.convs) held.add(th);
+        }
+        for (const th of rec.convs) {
+          if (held.has(th)) continue;
+          for (const s of services()) sendFrame(s, { t: "conv-close", thread: th });
+        }
+        rec.convs.clear();
+      }
+    
+      function dropConn(rec, why) {
+        if (rec.dead) return;
+        languageCommands?.disconnect(rec.id);
+        rec.dead = true;
+        counters.closes++;
+        conns.delete(rec.id);
+        if (rec.reapTimer) { clearTimeout(rec.reapTimer); rec.reapTimer = null; }
+        broker.connClosed(rec);               // connection close ⇒ term-close all (§2.3)
+        releaseConvs(rec);                    // …and the same for conversations
+        if (rec.kind === "rtc") {
+          // A slot dying before anyone answered it takes its published offer
+          // with it, and the tick mints a replacement. No re-answer dance and
+          // no reaper: an unanswered slot has no clock to run out (v3 §4).
+          if (slots.delete(rec.id)) {
+            retractRtc((r) => String(r.session) === rec.id && r.kind === "slot").catch(() => {});
+          }
+          try { rec.dc?.close(); } catch { /* gone */ }
+          try { rec.pc?.close(); } catch { /* gone */ }
+        } else {
+          try { rec.sock.destroy(); } catch { /* gone */ }
+        }
+        if (rec.role === "service") broadcastServices();
+        if (process.env.DEBUG_HUB) log(`conn ${rec.id} dropped (${why})`);
+      }
+    
+      // ---- rtc liveness (PROTOCOL §2.1, run in reverse) ------------------
+      // A browser tab that reloads does NOT close its datachannel: the peer
+      // simply stops existing and libdatachannel reports no state change, so
+      // the hub kept the connection — and every tmux client it had attached —
+      // forever. Measured in production: two clients on one session at
+      // different sizes after a single reload, and with `window-size latest`
+      // the DEAD client can size the window the live card is rendering into.
+      // So the hub runs the binding's own rule (§2.1) in reverse: ping every
+      // open rtc connection on the same cadence and drop it after
+      // `pingMisses` unanswered pings. Dropping detaches every attachment it
+      // held (broker.connClosed → pty-host close → the tmux client dies);
+      // the SESSIONS are untouched, exactly as on any other disconnect.
+      //
+      // Socket clients are exempt: a unix socket reports EOF honestly, so
+      // there is nothing to detect — and pinging them would execute a
+      // third-party CLI client that never implemented `pong`.
+      function pingTick() {
+        if (stopping) return;
+        const now = Date.now();
+        for (const rec of [...conns.values()]) {
+          if (rec.kind !== "rtc" || rec.dead || rec.state !== "open") continue;
+          if ((rec.pingWait ?? 0) >= pingMisses) {
+            counters.stale++;
+            log(`dropped ${rec.id} (no pong) — ${rec.attachments.size} attachment(s) released`);
+            dropConn(rec, "no-pong");
+            continue;
+          }
+          rec.pingWait = (rec.pingWait ?? 0) + 1;
+          sendFrame(rec, { t: "ping", at: now });
+        }
+      }
+    
+      // ---- answerer (SPEC §7, PROTOCOL §5) -------------------------------
+    
+      async function retractRtc(pred) {
+        const rows = (await io.query("rtc/signal")).filter(pred);
+        if (!rows.length) return 0;
+        await io.evalLocal(rows.map((r) => `rtc/signal!:\n  this: ${r.this}\n  ..: _\n`).join("\n"));
+        io.markDirty();
+        return rows.length;
+      }
+    
+      // ---- v3: the hub offers, the tab answers ---------------------------
+      // RENDEZVOUS-V3.md. v2 had this backwards: the hub ANSWERED, and an
+      // answerer starts ICE the moment it applies the offer and dies ~39s
+      // later — less than the branch takes to deliver anything. So the hub's
+      // invitation expired before the browser could read it, every time, and
+      // the caller's retry made the branch slower still.
+      //
+      // An OFFERER has no such clock: it gathers and waits. Spiked against
+      // node-datachannel 0.32.3 — an idle offer is healthy at 3 minutes, and
+      // answering one after 90s connects in 1s and carries a byte. So the hub
+      // pre-mints offers when nobody is waiting, publishes them, and lets them
+      // sit. A tab reads one out of its ALREADY-SYNCED local store and answers
+      // it: one sync leg to connect, and nothing in the sequence can go stale.
+      //
+      // Slots are addressed, not claimed. Two tabs may answer the same one;
+      // the hub takes the first answer it reads and the losers time out and
+      // take another. `freeSlots` is topped up to `slotPool` continuously, so
+      // that is rare and self-correcting.
+      const slots = new Map();               // slotId -> rec, awaiting an answer
+      let slotSeq = 0;
+      const freeSlots = () => [...slots.values()].filter((r) => !r.dead && r.state === "offered");
+    
+      function mintSlot() {
+        if (!ndcOpt || stopping) return;
+        const id = `${hubId}-${++slotSeq}`;
+        const rec = { id, kind: "rtc", role: "consumer", serveName: null, serveSeq: 0,
+                      pc: null, dc: null, state: "gathering", at: Date.now(),
+                      attachments: new Map(), convs: new Set(),
+                      dead: false, reapTimer: null, mintedAt: Date.now(),
+                      pingWait: 0, lastPong: 0 };
+        let pc;
+        try { pc = new ndcOpt.PeerConnection(`hub-${id}`, { iceServers }); }
+        catch (e) { log(`slot ${id}: PeerConnection failed: ${e.message}`); return; }
+        rec.pc = pc;
+        conns.set(id, rec);
+        slots.set(id, rec);
+    
+        let settled = false;
+        const gatherCap = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          log(`slot ${id}: gathering never completed — dropping, no row written`);
+          dropConn(rec, "gather-cap");
+        }, gatherCapMs);
+    
+        const publish = async () => {
+          if (settled || rec.dead) return;
+          settled = true;
+          clearTimeout(gatherCap);
+          let d = null;
+          try { d = pc.localDescription(); } catch { /* closed */ }
+          // The candidate rule, absolute: candidate-less SDP is never published.
+          if (!d || typeof d.sdp !== "string" || !/^a=candidate:/m.test(d.sdp)) {
+            log(`slot ${id}: candidate-less offer — aborting, no row written`);
+            dropConn(rec, "no-candidate");
+            return;
+          }
+          const body = { type: d.type, sdp: d.sdp };
+          if (turn) body.turn = { urls: [turn] };
+          const payload = Buffer.from(JSON.stringify(body)).toString("base64");
+          try {
+            await io.evalLocal(
+              `rtc/signal!:\n  session: ${q(id)}\n  kind: "slot"\n  payload: ${q(payload)}\n  at: ${q(Date.now())}\n`);
+            io.markDirty();
+            // NOT publishNow: nobody is waiting on this. That is the entire
+            // point — a slot is minted long before it is needed, so it rides
+            // the ordinary sync instead of jumping the queue.
+          } catch (e) {
+            log(`slot ${id}: publish failed: ${e.message}`);
+            dropConn(rec, "publish-failed");
+            return;
+          }
+          rec.state = "offered";
+          counters.slots++;
+          log(`slot published ${id} (${freeSlots().length} free)`);
+          if (expeditePublish) {
+            // The pool just died of an address change and a browser may be
+            // holding only dead slots. This slot (and the retractions before
+            // it) should not wait out the beat-push gate.
+            expeditePublish = false;
+            io.publishNow();
+          }
+        };
+    
+        // ALL callbacks strictly BEFORE the channel is created — gathering
+        // events registered even one macrotask late are lost (spike-verified).
+        pc.onGatheringStateChange((s) => {
+          if (s === "complete") publish().catch((e) => log(`slot ${id}: publish error: ${e.message}`));
+        });
+        pc.onLocalDescription(() => { /* trickle draft — never published */ });
+        pc.onStateChange((s) => {
+          if ((s === "failed" || s === "closed") && !rec.dead) dropConn(rec, `pc-${s}`);
+        });
+        // The OFFERER creates the channel (v2's answerer received one). It
+        // opens when a tab finally answers, and that is when it becomes a
+        // connection rather than an invitation.
+        try {
+          const dc = pc.createDataChannel("chat");
+          dc.onOpen(() => adopt(rec, dc));
+        } catch (e) {
+          settled = true;
+          clearTimeout(gatherCap);
+          log(`slot ${id}: createDataChannel failed: ${e.message}`);
+          dropConn(rec, "no-channel");
+        }
+      }
+    
+      function consumeAnswer(id, row) {
+        const rec = slots.get(id);
+        if (!rec || rec.dead || rec.state !== "offered") return false;   // already taken
+        let answer;
+        try {
+          answer = JSON.parse(Buffer.from(String(row.payload ?? ""), "base64").toString("utf8"));
+          if (typeof answer.sdp !== "string" || !answer.sdp) throw new Error("no sdp");
+        } catch (e) { log(`slot ${id}: bad answer payload (${e.message})`); return false; }
+        try {
+          rec.pc.setRemoteDescription(answer.sdp, "answer");
+        } catch (e) {
+          log(`slot ${id}: setRemoteDescription failed: ${e.message}`);
+          dropConn(rec, "bad-answer");
+          return false;
+        }
+        rec.state = "answered";
+        slots.delete(id);                    // no longer on offer; conns still holds it
+        counters.answers++;
+        log(`slot ${id} answered by ${answer.realm || "?"} — connecting`);
+        return true;
+      }
+    
+      // What a published slot's HOST candidate is worth. An idle offer has no
+      // expiry to speak of — it has no remote description, so it forms no
+      // candidate pairs, has no checklist, and there is nothing for ICE to time
+      // out (RFC 8445 §6.1.4). What it does have is an address, and an address
+      // stops being true when the machine's addresses change: wifi to ethernet,
+      // a move, a DHCP renewal. That is an EVENT, not a duration — a slot minted
+      // ten seconds before you unplug is exactly as dead as one from yesterday,
+      // so re-minting on a schedule would be both too often and too late.
+      //
+      // (The srflx candidate is a NAT mapping and decays in minutes regardless.
+      // Nothing here refreshes it; for a peer that needs the reflexive path,
+      // that is what TURN is for. Same-machine peers connect on the host pair.)
+      // IPv4 only, and addresses only — not interface names. libdatachannel
+      // publishes an IPv4 host candidate, so that is the thing whose truth we
+      // are tracking. Watching everything `networkInterfaces()` returns would
+      // churn the pool for nothing: on this machine that list carries AirDrop's
+      // `awdl0` and eight `utun` VPN interfaces, all link-local IPv6, all of
+      // which appear and vanish on their own schedule.
+      const localAddrs = () => {
+        const out = [];
+        for (const list of Object.values(networkInterfaces()))
+          for (const a of list || []) {
+            if (a.internal || a.family !== "IPv4") continue;
+            // 169.254/16 is link-local self-assignment — an interface coming up
+            // without DHCP. It appears and vanishes on its own (measured
+            // 2026-08-07: one flap re-minted the whole pool twice in 5 minutes
+            // and left it EMPTY for 48s), and no peer dials us on it. Not an
+            // address of ours for fingerprint purposes.
+            if (a.address.startsWith("169.254.")) continue;
+            out.push(a.address);
+          }
+        return [...new Set(out)].sort().join(",");
+      };
+      let mintedAddrs = localAddrs();
+      // Set when an address change killed the pool: the browser may be staring
+      // at retracted slots, so the first replacement to publish jumps the push
+      // queue instead of waiting out the ≤60s beat gate.
+      let expeditePublish = false;
+    
+      const answerer = { inFlight: false };
+      async function slotTick() {
+        if (!ndcOpt || answerer.inFlight || stopping) return;
+        answerer.inFlight = true;
+        try {
+          const rows = await io.query("rtc/signal");
+          const junk = [];
+          const consumed = [];
+          for (const r of rows) {
+            const id = String(r.session ?? "");
+            const kind = String(r.kind ?? "");
+            if (kind === "answer") {
+              // Ours to act on only if it names a slot we are still offering.
+              // Everything else — an answer for a slot already taken, or for a
+              // dead hub's slot — is litter either way, so it is swept.
+              if (consumeAnswer(id, r)) consumed.push(r);
+              else junk.push(r);
+            } else if (kind === "slot") {
+              // Our own live slots stay. Anything else claiming to be a slot is
+              // a previous hub instance's (or another machine's) and is dead —
+              // the PeerConnection behind it does not exist any more.
+              if (!slots.has(id)) junk.push(r);
+            } else {
+              junk.push(r);                  // v2 call/accept litter, foreign kinds
+            }
+          }
+          // A consumed answer AND the slot row it consumed both go: the slot is
+          // spoken for, and leaving it published invites a second tab to answer
+          // an offer that already has one.
+          for (const r of consumed) {
+            const slotRow = rows.find((x) => String(x.session) === String(r.session) && x.kind === "slot");
+            if (slotRow) junk.push(slotRow);
+          }
+          if (junk.length) {
+            await io.evalLocal(junk.map((r) => `rtc/signal!:\n  this: ${r.this}\n  ..: _\n`).join("\n"));
+            io.markDirty();
+            counters.sweeps += junk.length;
+            if (consumed.length) io.publishNow();   // the tab is mid-handshake
+          }
+          // Addresses changed under us: every unanswered slot is advertising a
+          // host candidate that is no longer ours. Drop them (which retracts
+          // their rows) and let the top-up below re-mint against the new
+          // address. Answered ones are left alone — they have a live peer.
+          const now = localAddrs();
+          if (now !== mintedAddrs) {
+            const dead = freeSlots();
+            log(`network changed (${mintedAddrs || "none"} -> ${now || "none"}) — re-minting ${dead.length} slot(s)`);
+            mintedAddrs = now;
+            for (const rec of dead) dropConn(rec, "address-change");
+            expeditePublish = true;     // first replacement published jumps the queue
+          }
+          // Top the pool back up. Minting is cheap — gathering measured at 0s —
+          // and the cost of being short a slot is a tab waiting a whole sync
+          // round for one to appear. Count EVERY live unanswered slot, not
+          // just published ones: a slot spends seconds in 'gathering' (its
+          // publish eval can queue behind a 48s push), and counting only
+          // 'offered' minted three more per tick until the first publish
+          // landed — measured 5 slots in a 3-pool at boot, 2026-08-08.
+          const pending = [...slots.values()].filter((r) => !r.dead).length;
+          for (let i = pending; i < slotPool; i++) mintSlot();
+        } catch (e) {
+          log(`slot tick failed: ${e.message}`);
+        } finally {
+          answerer.inFlight = false;
+        }
+      }
+    
+      function adopt(rec, dc) {
+        if (rec.dead) { try { dc.close(); } catch { /* gone */ } return; }
+        if (rec.dc) return;                   // first channel is THE channel; label ignored
+        rec.dc = dc;
+        rec.state = "open";
+        rec.pingWait = 0;                     // liveness starts clean at open
+        rec.lastPong = Date.now();
+        if (rec.reapTimer) { clearTimeout(rec.reapTimer); rec.reapTimer = null; }
+        dc.onMessage((raw) => {
+          const s = typeof raw === "string" ? raw : Buffer.from(raw).toString("utf8");
+          let frame;
+          try { frame = JSON.parse(s); } catch { return; }            // dropped silently
+          if (!frame || typeof frame !== "object" || typeof frame.t !== "string") return;
+          routeFrame(rec, frame, s);
+        });
+        dc.onClosed(() => {
+          if (rec.dead) return;
+          log(`closed ${rec.id}`);
+          dropConn(rec, "dc-closed");
+        });
+        counters.opens++;
+        const direct = [...conns.values()].filter((c) => c.kind === "rtc" && c.state === "open").length;
+        log(`open ${rec.id} (${direct} direct)`);
+        greet(rec);
+        slots.delete(rec.id);                                              // no longer on offer
+        retractRtc((r) => String(r.session) === rec.id).catch(() => {});   // slot + answer rows
+      }
+    
+      // ---- broker (PROTOCOL §2.3, SPEC §11) ------------------------------
+    
+      const broker = (() => {
+        let child = null;
+        let nsConfigured = false;
+        const clientOwner = new Map();     // clientId -> {conn, session}
+        const pendingOpens = [];           // {session, conn, timer}
+        const pendingKills = new Map();    // session -> cleanup timer
+    
+        function denyReason(sessionKey) {
+          if (!terminal) return "terminals are not enabled on this hub (start it with --terminal)";
+          if (!tmuxInfo.ok) return `tmux unavailable: ${tmuxInfo.why}`;
+          if (!KEY_RE.test(sessionKey || "")) return "malformed session key";
+          return null;
+        }
+        const deny = (conn, session, reason) => {
+          sendFrame(conn, { t: "term-deny", session, reason });
+          log(`term ${session || "?"} denied ${conn.id}: ${reason}`);
+        };
+    
+        // Ground truth for create-vs-attach and the --max-sessions cap. An
+        // errored ls (usually "no server running") reads as zero sessions.
+        function liveSessions() {
+          if (!TMUX) return [];
+          try {
+            return execFileSync(TMUX, ["-L", ns, "ls", "-F", "#{session_name}"],
+              { stdio: ["ignore", "pipe", "pipe"] }).toString().split("\n").filter(Boolean);
+          } catch { return []; }
+        }
+    
+        // First-contact server config, identical to pty-host's: exit-empty off
+        // pins the server in the same chain that configures it, so an empty
+        // namespace's server persists (and `ls` exiting 0 with empty output
+        // means "zero sessions", not "no server").
+        function configureNamespace() {
+          if (nsConfigured) return;
+          configureTerminalNamespace(TMUX, ns);
+          nsConfigured = true;
+        }
+    
+        // Gate for term-open and the attach op; also records the origin hint
+        // when this open will create the session.
+        function admitOpen(conn, key) {
+          const why = denyReason(key);
+          if (why) return why;
+          const live = liveSessions();
+          if (!live.includes(key)) {
+            if (maxSessions > 0 && live.length >= maxSessions)
+              return `session cap reached (--max-sessions ${maxSessions})`;
+            originHints.set(key, conn.kind === "rtc" ? "deck" : `socket:${conn.serveName ?? conn.id}`);
+          }
+          return null;
+        }
+    
+        function ensureChild() {
+          if (child) return true;
+          const nodeBin = resolveNode();
+          if (!nodeBin) { log("term: no node binary on PATH for pty-host"); return false; }
+          child = spawn(nodeBin, [ptyHostPath, ns], { stdio: ["pipe", "pipe", "inherit"] });
+          createInterface({ input: child.stdout }).on("line", (line) => {
+            if (!line.trim()) return;
+            let ev;
+            try { ev = JSON.parse(line); } catch { return; }
+            try { childEvent(ev); } catch (e) { log(`term: child event error: ${e.message}`); }
+          });
+          child.on("exit", (code) => {
+            if (child === null) return;      // stopChild already swept
+            child = null;
+            log(`term: pty-host exited (${code}) — attachments dropped, sessions unaffected`);
+            // No protocol frame exists for a forced detach; attachments just
+            // drop and the next term-open re-establishes (SPEC §15).
+            for (const own of clientOwner.values()) own.conn.attachments.delete(own.session);
+            clientOwner.clear();
+            for (const p of pendingOpens.splice(0)) {
+              clearTimeout(p.timer);
+              deny(p.conn, p.session, "pty-host died");
+            }
+          });
+          return true;
+        }
+        const childSend = (obj) => {
+          if (!child) return;
+          try { child.stdin.write(JSON.stringify(obj) + "\n"); } catch (e) { log(`term: child write failed: ${e.message}`); }
+        };
+    
+        const attachedCount = (session) =>
+          [...clientOwner.values()].filter((o) => o.session === session).length;
+    
+        function childEvent(ev) {
+          if (ev.e === "ready") { log(`term: pty-host ready (ns ${ev.ns})`); return; }
+          if (ev.e === "open") {
+            const i = pendingOpens.findIndex((p) => p.session === ev.session);
+            if (i < 0) { childSend({ c: "close", client: ev.client }); return; }   // orphan
+            const p = pendingOpens.splice(i, 1)[0];
+            clearTimeout(p.timer);
+            if (p.conn.dead) { childSend({ c: "close", client: ev.client }); return; }
+            p.conn.attachments.set(ev.session, ev.client);
+            clientOwner.set(ev.client, { conn: p.conn, session: ev.session });
+            log(`term ${ev.session} attach(${attachedCount(ev.session)}) ${p.conn.id}`);
+            return;
+          }
+          if (ev.e === "out") {
+            // term-out ONLY to the attached connection — never broadcast (§2.3).
+            const own = clientOwner.get(ev.client);
+            if (own && !own.conn.dead && own.conn.attachments.get(own.session) === ev.client)
+              sendFrame(own.conn, { t: "term-out", session: own.session, d: ev.d });
+            return;
+          }
+          if (ev.e === "exit") {
+            const own = clientOwner.get(ev.client);
+            clientOwner.delete(ev.client);
+            if (!own) return;
+            if (own.conn.attachments.get(own.session) === ev.client)
+              own.conn.attachments.delete(own.session);
+            // Child reasons → PROTOCOL reasons. close/detached are detaches,
+            // not session deaths: no frame exists for those on purpose.
+            const reason =
+              ev.reason === "server-lost" ? "lost"
+              : (ev.reason === "close" || ev.reason === "detached") ? null
+              : pendingKills.has(own.session) ? "kill" : "exit";
+            if (reason && !own.conn.dead) {
+              sendFrame(own.conn, { t: "term-exit", session: own.session, code: ev.code ?? null, reason });
+              log(`term ${own.session} ${reason === "lost" ? "lost" : "exited"} → ${own.conn.id}`);
+            }
+            return;
+          }
+          if (ev.e === "killed") { log(`term ${ev.session} killed`); return; }
+          if (ev.e === "error") {
+            // Open failures answer the oldest pending open on that session.
+            if (ev.session && /bad session name|too many clients|config failed|spawn failed|node-pty unavailable/.test(ev.msg || "")) {
+              const i = pendingOpens.findIndex((p) => p.session === ev.session);
+              if (i >= 0) {
+                const p = pendingOpens.splice(i, 1)[0];
+                clearTimeout(p.timer);
+                deny(p.conn, p.session, ev.msg);
+                return;
+              }
+            }
+            log(`term: pty-host error: ${ev.msg}`);
+          }
+        }
+    
+        function open(conn, session, cols, rows, cmd, cwd) {
+          // Repeat term-open on the same (connection, session) is idempotent:
+          // a fresh client at the given size — tmux repaints the whole screen
+          // into it, which IS the required resize + redraw.
+          const prev = conn.attachments.get(session);
+          if (prev != null) { conn.attachments.delete(session); childSend({ c: "close", client: prev }); }
+          if (!ensureChild()) { deny(conn, session, "pty-host unavailable (no node binary)"); return; }
+          const p = {
+            session, conn,
+            timer: setTimeout(() => {
+              const i = pendingOpens.indexOf(p);
+              if (i >= 0) pendingOpens.splice(i, 1);
+              deny(conn, session, "pty-host open timed out");
+            }, openTimeoutMs),
+          };
+          pendingOpens.push(p);
+          childSend({
+            c: "open", session,
+            cols: clamp(cols, 20, 500, 80), rows: clamp(rows, 5, 200, 24),
+            // tmux ignores cmd/cwd when the session exists (-A), so passing the
+            // defaults unconditionally is exactly the §2.3 create-only rule.
+            cmd: (typeof cmd === "string" && cmd) || terminalShell,
+            cwd: (typeof cwd === "string" && cwd) || terminalCwd,
+          });
+        }
+    
+        // kill-session directly: attached clients (if any) die with reason
+        // session-ended and fan term-exit per attachment; idempotent by design.
+        function kill(session) {
+          if (!TMUX) return;
+          const old = pendingKills.get(session);
+          if (old) clearTimeout(old);
+          pendingKills.set(session, setTimeout(() => pendingKills.delete(session), 30000));
+          // A kill is a DELETION, not an exit, so the registry row goes with
+          // it rather than sitting in the list as `exited` for the 24h
+          // retention. Without this the deck's session menu — which lists
+          // running sessions — would show a killed session until the next
+          // projection tick, then show nothing, while `ls` still carried it:
+          // two answers to "what exists?". The projection reads this set.
+          killedForget.add(session);
+          execFile(TMUX, ["-L", ns, "kill-session", "-t", "=" + session], () => {});
+          log(`term ${session} kill requested`);
+        }
+    
+        function handle(conn, m) {
+          const session = typeof m.session === "string" ? m.session : "";
+          switch (m.t) {
+            case "term-open": {
+              const why = admitOpen(conn, session);
+              if (why) { deny(conn, session, why); return; }
+              open(conn, session, m.cols, m.rows, m.cmd, m.cwd);
+              return;
+            }
+            case "term-in": {
+              const cid = conn.attachments.get(session);
+              if (cid == null || typeof m.d !== "string") return;     // dropped silently (§2.3)
+              childSend({ c: "in", client: cid, d: m.d });
+              return;
+            }
+            case "term-resize": {
+              const cid = conn.attachments.get(session);
+              if (cid == null) return;                                 // dropped silently
+              childSend({ c: "resize", client: cid, cols: clamp(m.cols, 20, 500, 80), rows: clamp(m.rows, 5, 200, 24) });
+              return;
+            }
+            case "term-close": {
+              const cid = conn.attachments.get(session);
+              if (cid == null) return;                                 // dropped silently
+              conn.attachments.delete(session);
+              childSend({ c: "close", client: cid });
+              log(`term ${session} detach ${conn.id}`);
+              return;
+            }
+            case "term-kill": {
+              if (!KEY_RE.test(session) || !tmuxInfo.ok) return;       // silent no-op
+              kill(session);
+              return;
+            }
+            default:
+              return;   // term-scroll (reserved-and-dead) and unknown term-*: dropped
+          }
+        }
+    
+        function connClosed(conn) {
+          for (const [, cid] of conn.attachments) childSend({ c: "close", client: cid });
+          conn.attachments.clear();
+          // clientOwner entries clean up on the child's exit events.
+        }
+    
+        function stopChild() {
+          for (const t of pendingKills.values()) clearTimeout(t);
+          pendingKills.clear();
+          for (const p of pendingOpens.splice(0)) clearTimeout(p.timer);
+          if (!child) return;
+          const c = child;
+          child = null;                       // marks "already swept" for the exit handler
+          clientOwner.clear();
+          try { c.stdin.end(); } catch { /* gone */ }   // stdin close = child detaches all + exits
+          const killT = setTimeout(() => { try { c.kill(); } catch { /* gone */ } }, 1500);
+          if (killT.unref) killT.unref();
+        }
+    
+        return { handle, open, admitOpen, kill, liveSessions, configureNamespace, connClosed, stopChild };
+      })();
+    
+      // ---- projection (SPEC §10) -----------------------------------------
+    
+      const proj = { state: new Map(), seeded: false, inFlight: false };
+    
+      const rowDoc = (r) =>
+        `term/session!:\n  this: id:tonkterm/session/${r.key}\n  key: ${q(r.key)}\n` +
+        `  title: ${q(r.title)}\n  origin: ${q(r.origin)}\n  status: ${q(r.status)}\n` +
+        `  born: ${q(r.born)}\n  seen: ${q(r.seen)}\n`;
+      const rowGone = (key) => `term/session!:\n  this: id:tonkterm/session/${key}\n  ..: _\n`;
+    
+      async function seedProjection() {
+        try {
+          const rows = await io.query("term/session");
+          for (const r of rows) {
+            const key = String(r.key ?? "");
+            if (!KEY_RE.test(key)) continue;
+            const status = String(r.status ?? "running");
+            proj.state.set(key, {
+              key,
+              title: String(r.title ?? ""),
+              origin: String(r.origin ?? "tmux"),
+              status,
+              born: Number(r.born) || 0,
+              seen: Number(r.seen) || 0,
+              endedAt: status === "running" ? 0 : (Number(r.seen) || Date.now()),
+            });
+          }
+          if (rows.length) log(`projection seeded from ${rows.length} row(s)`);
+        } catch (e) { log(`projection seed failed (starting empty): ${e.message}`); }
+        proj.seeded = true;
+      }
+    
+      function tmuxLs() {
+        return new Promise((resolveP) => {
+          execFile(TMUX, ["-L", ns, "ls", "-F",
+            "#{session_name}\t#{session_created}\t#{session_activity}\t#{pane_current_command}\t#{pane_current_path}\t#{pane_title}"],
+            { timeout: 5000 }, (err, stdout, stderr) => {
+              if (err) {
+                const s = String(stderr || err.message);
+                // "no server running" + running rows in facts = the lost case.
+                // NB: with exit-empty off an EMPTY namespace still has a live
+                // server: ls exits 0 with empty output = zero sessions, ≠ this.
+                if (/no server running|error connecting|No such file or directory/i.test(s))
+                  resolveP({ noServer: true });
+                else resolveP({ err: s.trim().slice(0, 200) });
+                return;
+              }
+              const sessions = new Map();
+              for (const line of stdout.split("\n")) {
+                if (!line.trim()) continue;
+                const [name, created, activity, cmd, cwd, paneTitle] = line.split("\t");
+                if (name) sessions.set(name, { created: Number(created) || 0, activity: Number(activity) || 0,
+                  cmd: terminalTitle({ cmd, cwd, paneTitle }, hostname()) });
+              }
+              resolveP({ sessions });
+            });
+        });
+      }
+    
+      // ---- the LIVE session view, on its own clock ------------------------
+      // Separate from projectionTick on purpose. The projection persists, and
+      // persisting means `io.evalLocal` on the single-writer lane, behind
+      // whatever push is running (~48s) — and its `inFlight` guard then stops
+      // every later tick for that whole time. Both symptoms the deck showed
+      // came from sharing that clock: a new session took a minute to appear,
+      // and a killed one took 20s to leave. Reading tmux is milliseconds and
+      // touches nothing, so the live view runs on its own short timer and is
+      // never gated by the branch. The durable rows are unchanged; they are
+      // simply no longer what the UI waits for.
+      async function sessionsTick() {
+        if (!tmuxInfo.ok || stopping) return;
+        const res = await tmuxLs();
+        if (res.err) return;                       // logged by the projection
+        const rows = [];
+        if (!res.noServer) {
+          for (const [key, live] of res.sessions) {
+            if (!KEY_RE.test(key)) continue;
+            const cur = proj.state.get(key);
+            rows.push({
+              key,
+              title: sessionLabels.get(`terminal:${key}`)?.title ?? (titleLocked.has(key) ? (titleHints.get(key) || cur?.title || live.cmd)
+                   : (titleHints.get(key) ?? live.cmd ?? (cur ? cur.title : ""))),
+              origin: originHints.get(key) ?? (cur ? cur.origin : "tmux"),
+              status: "running",
+              born: live.created * 1000,
+              seen: live.activity * 1000,
+            });
+          }
+        }
+        // Known-but-gone sessions keep their last durable state, EXCEPT ones
+        // killed on request — those are deletions, not exits, and must not
+        // linger in the list while the retraction is still in flight.
+        for (const r of proj.state.values()) {
+          if ((!res.noServer && res.sessions.has(r.key)) || killedForget.has(r.key)) continue;
+          rows.push({ key: r.key, title: r.title, origin: r.origin,
+                      status: res.noServer ? "lost" : (r.status === "running" ? "exited" : r.status),
+                      born: r.born, seen: r.seen });
+        }
+        broadcastSessions(rows);
+      }
+    
+      async function projectionTick() {
+        if (!tmuxInfo.ok || !proj.seeded || proj.inFlight || stopping) return;
+        proj.inFlight = true;
+        try {
+          const res = await tmuxLs();
+          if (res.err) { log(`projection: tmux ls failed: ${res.err}`); return; }
+          const now = Date.now();
+          const docs = [];
+          const commits = [];   // applied only after the write lands, so a failed
+                                // eval leaves the diff standing for the next sweep
+          if (res.noServer) {
+            for (const r of proj.state.values()) {
+              if (r.status !== "running") continue;
+              docs.push(rowDoc({ ...r, status: "lost" }));
+              commits.push(() => { r.status = "lost"; r.endedAt = now; log(`term ${r.key} lost`); });
+            }
+          } else {
+            for (const [key, live] of res.sessions) {
+              if (!KEY_RE.test(key)) continue;   // foreign-named sessions can't be entities
+              const born = live.created * 1000;
+              const seen = live.activity * 1000; // last activity — seen bumps only on
+                                                 // change, keeping abandonment visible
+              const cur = proj.state.get(key);
+              if (!cur) {
+                const row = {
+                  key,
+                  title: titleHints.get(key) ?? live.cmd ?? "",
+                  origin: originHints.get(key) ?? "tmux",
+                  status: "running", born, seen, endedAt: 0,
+                };
+                docs.push(rowDoc(row));
+                commits.push(() => { proj.state.set(key, row); log(`term ${key} projected(${row.origin})`); });
+              } else {
+                const next = {
+                  title: titleLocked.has(key) ? cur.title : (live.cmd || cur.title),
+                  origin: originHints.get(key) ?? cur.origin,   // a re-create may re-origin
+                  status: "running", born, seen,
+                };
+                // `seen` drifts with every keystroke, and rewriting the row for
+                // that is not free: each row is rendered in the deck, and a card
+                // that re-renders tears down its terminal. Sub-minute precision
+                // buys nothing — the launcher says "11m ago" — so only a real
+                // drift (or a meaningful field) is worth a write. Measured
+                // 2026-08-05: without this, using one terminal rebuilt EVERY
+                // terminal card every 2s, and only the newest survived the race.
+                const seenDrift = Math.abs(next.seen - cur.seen) >= seenEpsMs;
+                if (next.title !== cur.title || next.origin !== cur.origin ||
+                    cur.status !== "running" || next.born !== cur.born || seenDrift) {
+                  const resurrected = cur.status !== "running";
+                  docs.push(rowDoc({ key, ...next }));
+                  commits.push(() => {
+                    Object.assign(cur, next, { endedAt: 0 });
+                    if (resurrected) log(`term ${key} projected(${cur.origin}) — resurrected`);
+                  });
+                }
+              }
+            }
+            for (const r of proj.state.values()) {
+              if (r.status === "running" && !res.sessions.has(r.key)) {
+                // Killed on request → the row goes now. Ended by itself →
+                // marked exited and kept for the retention window.
+                if (killedForget.has(r.key)) {
+                  docs.push(rowGone(r.key));
+                  commits.push(() => {
+                    proj.state.delete(r.key);
+                    killedForget.delete(r.key);
+                    originHints.delete(r.key); titleHints.delete(r.key); titleLocked.delete(r.key);
+                    log(`term ${r.key} killed — row retracted`);
+                  });
+                } else {
+                  docs.push(rowDoc({ ...r, status: "exited" }));
+                  commits.push(() => { r.status = "exited"; r.endedAt = now; log(`term ${r.key} exited`); });
+                }
+              }
+            }
+          }
+          for (const r of [...proj.state.values()]) {   // RETAIN_EXITED, then forgotten
+            if (r.status !== "running" && r.endedAt && now - r.endedAt > retainExitedMs) {
+              docs.push(rowGone(r.key));
+              commits.push(() => {
+                proj.state.delete(r.key);
+                originHints.delete(r.key); titleHints.delete(r.key); titleLocked.delete(r.key);
+                log(`term ${r.key} retracted (retention)`);
+              });
+            }
+          }
+          if (docs.length) {
+            await io.evalLocal(docs.join("\n"));   // one batched write, on change only
+            io.markDirty();
+            for (const fn of commits) fn();
+          }
+        } catch (e) {
+          log(`projection error: ${e.message}`);
+        } finally {
+          proj.inFlight = false;
+        }
+      }
+    
+      // ---- socket door (PROTOCOL §4) -------------------------------------
+    
+      function clearStaleSocket() {
+        return new Promise((resolveP, rejectP) => {
+          if (!existsSync(socketPath)) return resolveP();
+          const probe = net.connect(socketPath);
+          const to = setTimeout(() => {
+            probe.destroy();
+            try { unlinkSync(socketPath); } catch { /* gone */ }
+            resolveP();
+          }, 500);
+          probe.on("connect", () => {
+            clearTimeout(to); probe.destroy();
+            rejectP(new Error(`another hub is already serving ${socketPath}`));
+          });
+          probe.on("error", () => {
+            clearTimeout(to);
+            try { unlinkSync(socketPath); } catch { /* gone */ }
+            resolveP();
+          });
+        });
+      }
+    
+      function onSock(sock) {
+        const rec = { id: `sock-${++sockSeq}`, kind: "socket", role: "consumer",
+                      serveName: null, serveSeq: 0, sock, attachments: new Map(),
+                      convs: new Set(), dead: false, buf: "" };
+        conns.set(rec.id, rec);
+        log(`socket client ${rec.id} connected`);
+        greet(rec);
+        sock.on("data", (chunk) => {
+          rec.buf += chunk.toString("utf8");   // no maximum line length assumed
+          let nl;
+          while ((nl = rec.buf.indexOf("\n")) >= 0) {
+            const line = rec.buf.slice(0, nl);
+            rec.buf = rec.buf.slice(nl + 1);
+            if (!line.trim()) continue;
+            let obj;
+            try { obj = JSON.parse(line); } catch { continue; }        // dropped silently
+            if (!obj || typeof obj !== "object") continue;
+            if (typeof obj.c === "string") {
+              handleOp(rec, obj).catch((e) => log(`op ${obj.c} failed: ${e.message}`));
+            } else if (typeof obj.t === "string") {
+              routeFrame(rec, obj, line);
+            }                                                          // neither key: dropped
+          }
+        });
+        const bye = () => {
+          if (rec.dead) return;
+          log(`socket client ${rec.id}${rec.serveName ? ` (${rec.serveName})` : ""} disconnected`);
+          dropConn(rec, "sock-closed");
+        };
+        sock.on("close", bye);
+        sock.on("error", bye);
+      }
+    
+      async function handleOp(rec, op) {
+        const reply = (extra) =>
+          sendFrame(rec, { c: op.c, ...(op.id !== undefined ? { id: op.id } : {}), ...extra });
+        switch (op.c) {
+          case "new": {
+            if (!terminal) { reply({ ok: false, error: "terminals are not enabled on this hub (start it with --terminal)" }); return; }
+            if (!tmuxInfo.ok) { reply({ ok: false, error: `tmux unavailable: ${tmuxInfo.why}` }); return; }
+            const key = (op.key === undefined || op.key === null || op.key === "") ? mintKey() : String(op.key);
+            if (!KEY_RE.test(key)) { reply({ ok: false, error: "malformed session key" }); return; }
+            const live = broker.liveSessions();
+            if (live.includes(key)) { reply({ ok: true, key }); return; }   // idempotent; create-args ignored
+            if (maxSessions > 0 && live.length >= maxSessions) {
+              reply({ ok: false, error: `session cap reached (--max-sessions ${maxSessions})` });
+              return;
+            }
+            try {
+              broker.configureNamespace();
+              const argv = ["-L", ns, "new-session", "-d", "-s", key,
+                "-c", (typeof op.cwd === "string" && op.cwd) || terminalCwd,
+                (typeof op.cmd === "string" && op.cmd) || terminalShell];
+              execFileSync(TMUX, argv, { env: terminalEnvironment(), stdio: ["ignore", "ignore", "pipe"] });
+            } catch (e) {
+              reply({ ok: false, error: `tmux new-session failed: ${String(e.stderr || e.message).trim().slice(0, 200)}` });
+              return;
+            }
+            originHints.set(key, `socket:${rec.serveName ?? rec.id}`);
+            if (typeof op.title === "string" && op.title) { titleHints.set(key, op.title); titleLocked.add(key); }
+            log(`term ${key} created via new (${rec.serveName ?? rec.id})`);
+            reply({ ok: true, key });
+            projectionTick().catch(() => {});     // surface the row promptly
+            return;
+          }
+          case "ls": {
+            const sessions = [...proj.state.values()].map((r) => ({
+              key: r.key, title: r.title, origin: r.origin, status: r.status,
+              born: r.born, seen: r.seen,
+            }));
+            reply({ ok: true, sessions });
+            return;
+          }
+          case "kill": {
+            const key = String(op.key ?? "");
+            if (!KEY_RE.test(key)) { reply({ ok: false, error: "malformed session key" }); return; }
+            if (!tmuxInfo.ok) { reply({ ok: false, error: `tmux unavailable: ${tmuxInfo.why}` }); return; }
+            broker.kill(key);
+            reply({ ok: true });                  // idempotent, even if already gone
+            return;
+          }
+          case "serve": {
+            const name = String(op.name ?? "").trim();
+            if (!name || name.length > 100 || !/^[a-z0-9:._-]+$/i.test(name)) {
+              reply({ ok: false, error: "bad service name" });
+              return;
+            }
+            const first = rec.role !== "service";
+            const changed = rec.serveName !== name;
+            rec.role = "service";
+            if (first) rec.serveSeq = ++serveSeq;   // attach order sticks across rename
+            rec.serveName = name;
+            reply({ ok: true });
+            if (first || changed) {
+              log(`client attached ${name} (${rec.id})`);
+              broadcastServices();
+            }
+            return;
+          }
+          case "attach": {
+            const key = String(op.key ?? "");
+            const why = broker.admitOpen(rec, key);
+            if (why) { reply({ ok: false, error: why }); return; }     // same info as term-deny
+            reply({ ok: true, key });
+            broker.open(rec, key, op.cols ?? 80, op.rows ?? 24, undefined, undefined);
+            return;
+          }
+          // ---- branch door: the ONLY write path to this spot's store ------
+          // Local processes (the responder, live.mjs) do their branch I/O
+          // here instead of shelling out — see the branchOp comment above for
+          // why single-writer is not negotiable. These run through the hub's
+          // existing seam: `assert` = evalLocal + markDirty (local commit,
+          // pushed by the one sync loop), `query` = the flat-array-tolerant
+          // read, `sync` = jump the push queue for a latency-sensitive write.
+          case "assert": {
+            const doc = typeof op.notation === "string" ? op.notation : "";
+            if (!doc.trim()) { reply({ ok: false, error: "assert needs a notation string" }); return; }
+            if (doc.length > MAX_NOTATION) {
+              reply({ ok: false, error: `notation too large (${doc.length} > ${MAX_NOTATION})` });
+              return;
+            }
+            try {
+              await branchOp(async () => { await io.evalLocal(doc); io.markDirty(); });
+              reply({ ok: true });
+            } catch (e) {
+              reply({ ok: false, error: `assert failed: ${e.message}` });
+            }
+            return;
+          }
+          case "query": {
+            const concept = String(op.concept ?? "").trim();
+            if (!CONCEPT_RE.test(concept)) { reply({ ok: false, error: "malformed concept" }); return; }
+            try {
+              const rows = await branchOp(() => io.query(concept));
+              reply({ ok: true, rows: Array.isArray(rows) ? rows : [] });
+            } catch (e) {
+              reply({ ok: false, error: `query failed: ${e.message}` });
+            }
+            return;
+          }
+          case "sync": {
+            io.publishNow();                  // expedited push; the loop owns the network
+            reply({ ok: true, queued: true });
+            return;
+          }
+          default:
+            reply({ ok: false, error: "unknown op" });
+        }
+      }
+    
+      // ---- beat: REMOVED (2026-08-09) -------------------------------------
+      // The hub kept an agent/presence row under thread "hub" and rewrote it
+      // every heartbeat. That write cadence — not the payload — is what grew
+      // the store 20 GB in three days (POSTMORTEM-2026-08-08), and the wire
+      // now gates dialing on rendered slots instead of beat freshness. What
+      // remains is boot hygiene: retract any thread="hub" row a pre-removal
+      // hub left behind, so no chip renders a forever-stale hub presence.
+      async function sweepHubPresence() {
+        try {
+          const rows = (await io.query("agent/presence")).filter((r) => String(r.thread) === "hub");
+          if (!rows.length) return;
+          await io.evalLocal(rows.map((r) => `agent/presence!:\n  this: ${r.this}\n  ..: _\n`).join("\n"));
+          io.markDirty();
+          log(`swept ${rows.length} legacy hub presence row(s) — the heartbeat is gone`);
+        } catch (e) { log(`hub presence sweep failed (harmless, retried next boot): ${e.message}`); }
+      }
+    
+      // ---- lifecycle ------------------------------------------------------
+    
+      function hbLog() {
+        const all = [...conns.values()];
+        const rtc = all.filter((c) => c.kind === "rtc").length;
+        const sock = all.filter((c) => c.kind === "socket").length;
+        const running = [...proj.state.values()].filter((r) => r.status === "running").length;
+        // Sync health belongs in the line someone reads when the deck looks
+        // dead: the branch is the signalling channel, so "hub fine locally,
+        // pushes silently failing" IS an outage and must say so here.
+        const hs = io.health?.();
+        const age = (t) => (t ? `${Math.round((Date.now() - t) / 1000)}s ago` : "never");
+        const side = (n, h) => (h.streak
+          ? `${n} FAILING x${h.streak} (ok ${age(h.okAt)}; ${h.error.slice(0, 90)})`
+          : `${n} ok ${age(h.okAt)}`);
+        log(`hb: conns rtc=${rtc} sock=${sock} services=${serviceList().length} sessions=${running} · ` +
+            `slots=${counters.slots}/${freeSlots().length}free answers=${counters.answers} ` +
+            `opens=${counters.opens} closes=${counters.closes} stale=${counters.stale} ` +
+            `swept=${counters.sweeps}` +
+            (hs ? ` · ${side("pull", hs.pull)} · ${side("push", hs.push)}` : ""));
+      }
+    
+      async function start() {
+        if (terminal && !tmuxInfo.ok)
+          throw new Error(`--terminal refused: ${tmuxInfo.why}. Terminals need tmux ≥3.2 on PATH (or /opt/homebrew/bin).`);
+        if (!ndcOpt) log("answerer off — node-datachannel unavailable; socket door only");
+        await clearStaleSocket();
+        for (const row of await io.query('session/label').catch(() => []))
+          sessionLabels.set(`${row.kind}:${row.key}`, { kind: row.kind, key: row.key, title: row.title });
+        await new Promise((resolveP, rejectP) => {
+          server = net.createServer(onSock);
+          server.on("error", rejectP);
+          server.listen(socketPath, () => { server.on("error", (e) => log(`socket server error: ${e.message}`)); resolveP(); });
+        });
+        await seedProjection();
+        await sweepHubPresence();
+        // Boot: every rtc/signal row on the branch is now litter — v2 calls and
+        // accepts, and slots belonging to a hub instance that no longer exists
+        // (this one has a fresh `hubId`). Sweep first, THEN mint, so the pool
+        // the tabs see is entirely answerable. Since the heartbeat's removal
+        // this sweep is also the liveness story: a rendered slot means "a hub
+        // published this and no hub has swept it since".
+        await retractRtc(() => true).catch(() => {});
+        await slotTick();
+        if (tmuxInfo.ok) await projectionTick(); // boot reconcile (catches lost-at-boot)
+        if (tmuxInfo.ok) await sessionsTick();   // …and a live list before the first tab
+        timers.add(setInterval(() => { slotTick().catch(() => {}); }, rtcPollMs));
+        timers.add(setInterval(pingTick, pingMs));   // reloaded tabs never close their channel
+        if (tmuxInfo.ok) timers.add(setInterval(() => { projectionTick().catch(() => {}); }, projectionMs));
+        if (tmuxInfo.ok) timers.add(setInterval(() => { sessionsTick().catch(() => {}); }, sessionsMs));
+        timers.add(setInterval(hbLog, hbLogMs));
+        log(`hub up: spot ${spot} · agent ${agent} · socket ${socketPath} · ns ${ns} · ` +
+            `terminals ${terminal ? `on (${terminalShell})` : "off"} · answerer ${ndcOpt ? "on" : "off"}` +
+            `${turn ? ` · turn ${turn}` : ""}${maxSessions ? ` · max-sessions ${maxSessions}` : ""}` +
+            `${tmuxInfo.ok ? ` · ${tmuxInfo.version}` : ` · no tmux (${tmuxInfo.why})`}`);
+      }
+    
+      async function stop() {
+        if (stopping) return;
+        stopping = true;
+        for (const h of timers) clearInterval(h);
+        timers.clear();
+        for (const rec of [...conns.values()]) dropConn(rec, "shutdown");
+        broker.stopChild();
+        if (server) { await new Promise((r) => server.close(() => r())); server = null; }
+        try { unlinkSync(socketPath); } catch { /* gone */ }
+        // Take the invitations down on the way out. A slot outliving its hub is
+        // a trap: the PeerConnection behind it is gone, so a tab that answers it
+        // waits for a peer that cannot arrive. The `hubId` prefix is the backstop
+        // for the times this does not run (a kill -9, a crash).
+        await retractRtc((r) => String(r.session ?? "").startsWith(`${hubId}-`)).catch(() => {});
+        slots.clear();
+        log("hub stopped");
+      }
+    
+      return {
+        start, stop,
+        // exposed for the harness:
+        slotTick, projectionTick, sessionsTick, pingTick,
+        conns, proj, counters, broker, slots,
+        socketPath, ns, tmuxInfo,
+      };
+    }
+    
+    // ---- CLI --------------------------------------------------------------
+    
+    async function main() {
+      const args = parseArgs(process.argv.slice(2));
+      if (!args.spot) {
+        console.error("usage: bun agent/hub.mjs --spot <spot> [--terminal] [--terminal-shell sh] " +
+                      "[--terminal-cwd dir] [--turn url] [--max-sessions n] [--agent name]");
+        process.exit(1);
+      }
+      const log = defaultLog;
+      const io = createBranchIO({
+        spot: args.spot, log,
+        syncGapMs: numArg(args.syncgap, 1200),
+        // A push is ~48s on this store, so at a 60s gate the write lane was
+        // pushing ~45% of the time and every local write queued behind it.
+        // With the heartbeat gone this gate only coalesces event-driven dirty
+        // writes (projection churn, sweeps); anything a caller waits on goes
+        // through publishNow and skips it entirely.
+        beatPushMs: numArg(args.beatpush, 90000),
+        noSync: !!args.noSync,
+      });
+      const hub = createHub({
+        io, spot: args.spot,
+        agent: args.agent ?? shortHostname(),
+        terminal: !!args.terminal,
+        terminalShell: args["terminal-shell"] ?? process.env.SHELL ?? "/bin/sh",
+        terminalCwd: args["terminal-cwd"] ?? process.env.HOME,
+        turn: args.turn ?? null,
+        maxSessions: numArg(args["max-sessions"], 0),
+        rtcPollMs: numArg(args.poll, 1500),
+        projectionMs: numArg(args.projection, 2000),
+        pingMs: numArg(args.ping, 15000),
+        log,
+      });
+      try {
+        await io.start();          // pull first: the calls were placed in a browser
+        await hub.start();
+      } catch (e) {
+        console.error(String(e && e.message || e));
+        process.exit(1);
+      }
+      let stopping = false;
+      const shutdown = async (sig) => {
+        if (stopping) return;
+        stopping = true;
+        log(`${sig} — shutting down`);
+        try { await hub.stop(); } catch { /* best effort */ }
+        try { await io.stop(); } catch { /* best effort */ }
+        try { ndc?.cleanup(); } catch { /* once, at shutdown */ }
+        process.exit(0);
+      };
+      process.on("SIGINT", () => shutdown("SIGINT"));
+      process.on("SIGTERM", () => shutdown("SIGTERM"));
+    }
+    
+    const isMain = (() => {
+      try { return process.argv[1] && pathResolve(process.argv[1]) === fileURLToPath(import.meta.url); }
+      catch { return false; }
+    })();
+    if (isMain) main().catch((e) => { console.error(e); process.exit(1); });
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/pty-host.mjs
+  version: "1.0.0"
+  path: "agent/pty-host.mjs"
+  sha256: "7c66b88dee7947d1fab83592187a9b6914e4f048b9df595c12108163479a44d4"
+  content: |
+    #!/usr/bin/env node
+    // pty-host — hosts thin tmux CLIENTS (not shells) for terminal cards.
+    // SPEC §11: one attachment = one `tmux -L <ns> new-session -A -s <key>`
+    // under its own small PTY. Detach kills only the client; the session
+    // notices nothing. Mirroring is tmux multi-client (`window-size latest`).
+    // The exact-screen redraw on reattach replaces v1's escape-replay ring.
+    //
+    // Not a standalone tool: the agent spawns this and talks to it over
+    // stdin/stdout. Run it by hand only to debug (it will sit waiting for
+    // newline-delimited JSON on stdin).
+    //
+    // WHY IT IS A SEPARATE PROCESS, AND WHY IT IS NODE.
+    // `node-pty`'s prebuilt binary loads fine under bun, but opening the pty
+    // slave fails with ENXIO — measured 2026-08-04, inside and outside the
+    // sandbox, so it is bun's libuv seam and not something a flag fixes. Under
+    // node 22 the identical script works. The agent needs bun (that is where
+    // the datachannel and the whole chat lives), so the ptys live here instead
+    // and the two speak over pipes.
+    //
+    // CONFIG — tmux namespace (the `-L` socket name): argv[2], else
+    // $TONK_TMUX_NS, else "tonk-default". Isolated from the user's own tmux
+    // by construction; every option we set is on this socket only.
+    //
+    // PROTOCOL — one JSON object per line, both directions.
+    //   in:  {c:"open",   session, cols, rows, cmd?, cwd?}
+    //            attach-or-create: `new-session -A -s <session>`; cmd (string
+    //            or argv array) and cwd apply only when the session does not
+    //            exist yet. Every open spawns a NEW client; the reply carries
+    //            its client id. Multiple opens on one key = mirrored clients.
+    //   in:  {c:"in",     client|session, d}          d = base64 keystrokes
+    //   in:  {c:"resize", client|session, cols, rows}
+    //   in:  {c:"close",  client|session}   kill client PTY(s) only = detach;
+    //                                       the tmux session keeps running
+    //   in:  {c:"kill",   session}          tmux kill-session (session dies;
+    //                                       its clients get exit events)
+    //   out: {e:"ready",  ns}                          once, at startup
+    //   out: {e:"open",   client, session}             reply to open
+    //   out: {e:"out",    client, session, d}          d = base64 pty output
+    //   out: {e:"exit",   client, session, code, signal, reason}
+    //            reason: "close"         — we killed this client (c:"close",
+    //                                      shutdown sweep)
+    //                    "detached"      — tmux detached it (prefix-d, or a
+    //                                      detach-client from outside)
+    //                    "session-ended" — the session itself died (exit or
+    //                                      kill-session)
+    //                    "server-lost"   — the tmux server went away
+    //                    "unknown"       — client died without a recognisable
+    //                                      tmux sign-off
+    //   out: {e:"killed", session}                     reply to kill
+    //   out: {e:"error",  msg, client?, session?}
+    //
+    // Addressing: "in" by session writes to ONE client (tmux mirrors input
+    // from any client, so writing to all would double keystrokes); "resize"
+    // and "close" by session apply to all of the session's clients.
+    //
+    // Payloads are base64 because a pty emits BYTES: a UTF-8 sequence can be
+    // split across two reads, and decoding each read as a string would corrupt
+    // it. Raw bytes go all the way to xterm.js, which reassembles them.
+    
+    import { createInterface } from "node:readline";
+    import { accessSync, chmodSync, constants, statSync } from "node:fs";
+    import { execFile } from "node:child_process";
+    import { createRequire } from "node:module";
+    import { delimiter, dirname, join } from "node:path";
+    import { configureTerminalNamespace, terminalEnvironment } from './terminal-config.mjs';
+    
+    const require = createRequire(import.meta.url);
+    
+    function send(obj) {
+      process.stdout.write(JSON.stringify(obj) + "\n");
+    }
+    
+    // node-pty spawns a small `spawn-helper` binary on unix. Its prebuilt copy
+    // arrives without the executable bit when the install skipped lifecycle
+    // scripts — which is bun's default (`trustedDependencies` opts back in).
+    // The symptom is a bare "posix_spawnp failed" from deep inside the addon,
+    // so fix it here rather than depending on how the tree was installed.
+    function ensureHelperExecutable() {
+      try {
+        const root = dirname(require.resolve("node-pty/package.json"));
+        const dir = join(root, "prebuilds", `${process.platform}-${process.arch}`);
+        const helper = join(dir, "spawn-helper");
+        const mode = statSync(helper).mode;
+        if (!(mode & 0o111)) chmodSync(helper, (mode | 0o755) & 0o7777);
+      } catch { /* windows, or a source build — nothing to fix */ }
+    }
+    
+    let pty;
+    try {
+      ensureHelperExecutable();
+      pty = (await import("node-pty")).default;
+    } catch (e) {
+      send({ e: "error", msg: `node-pty unavailable: ${e.message}` });
+      process.exit(1);
+    }
+    
+    // ---- config -----------------------------------------------------------
+    
+    const NS = process.argv[2] || process.env.TONK_TMUX_NS || "tonk-default";
+    if (!/^[A-Za-z0-9._@-]+$/.test(NS)) {
+      send({ e: "error", msg: `bad tmux namespace: ${JSON.stringify(NS)}` });
+      process.exit(1);
+    }
+    
+    // tmux via PATH, with the known homebrew install as fallback (3.5a lives
+    // there; a launchd-started parent may not have /opt/homebrew on PATH).
+    function resolveTmux() {
+      const dirs = (process.env.PATH || "").split(delimiter).filter(Boolean);
+      dirs.push("/opt/homebrew/bin");
+      for (const d of dirs) {
+        const p = join(d, "tmux");
+        try { accessSync(p, constants.X_OK); return p; } catch { /* keep looking */ }
+      }
+      return null;
+    }
+    const TMUX = resolveTmux();
+    if (!TMUX) {
+      send({ e: "error", msg: "tmux not found (PATH + /opt/homebrew/bin)" });
+      process.exit(1);
+    }
+    
+    const MAX_CLIENTS = Number(process.env.TONK_TERM_MAX || 16);
+    
+    // ---- namespace config (first contact) ---------------------------------
+    // `set -g …` needs a live server, and a naked `start-server` exits again
+    // the moment the command sequence ends (exit-empty defaults on) — so a
+    // plain `start-server \; set …` chain configures a server that is gone
+    // before the first new-session. Turning exit-empty off IN THE SAME chain
+    // pins the server, so the options are in place before any session exists
+    // and the very first drawn frame already has no status bar. All of it is
+    // namespace-global on the tonk socket only; the user's tmux never sees it.
+    // Idempotent, so "once per pty-host lifetime" is enough — a restarted
+    // pty-host re-applies onto an already-configured server harmlessly.
+    let nsConfigured = false;
+    function configureNamespace() {
+      if (nsConfigured) return;
+      configureTerminalNamespace(TMUX, NS);
+      nsConfigured = true;
+    }
+    
+    // ---- clients ----------------------------------------------------------
+    
+    let nextClient = 1;
+    const clients = new Map();   // client id -> { proc, session, closing, tail }
+    
+    const clamp = (n, lo, hi, dflt) => {
+      const v = Math.round(Number(n));
+      return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt;
+    };
+    
+    // tmux prints a sign-off into the client just before it exits; it is the
+    // only way to tell a detach from a session death from this side.
+    function exitReason(rec) {
+      if (rec.closing) return "close";
+      const t = rec.tail;
+      if (t.includes("[detached")) return "detached";
+      if (t.includes("[server exited") || t.includes("[lost server]") ||
+          t.includes("server exited unexpectedly")) return "server-lost";
+      if (t.includes("[exited]") || t.includes("(exited)")) return "session-ended";
+      return "unknown";
+    }
+    
+    function open({ session, cols, rows, cmd, cwd }) {
+      if (typeof session !== "string" || !session || /[:.\s]/.test(session)) {
+        send({ e: "error", session, msg: `bad session name: ${JSON.stringify(session)}` });
+        return;
+      }
+      if (clients.size >= MAX_CLIENTS) {
+        send({ e: "error", session, msg: `too many clients (${MAX_CLIENTS})` });
+        return;
+      }
+      try {
+        configureNamespace();
+      } catch (err) {
+        send({ e: "error", session, msg: `tmux server config failed: ${String(err.stderr || err.message).trim()}` });
+        return;
+      }
+      // -A = attach-or-create; -c and the trailing command only take effect
+      // when the session does not exist yet — exactly the semantics we want.
+      const args = ["-L", NS, "new-session", "-A", "-s", session];
+      if (typeof cwd === "string" && cwd) args.push("-c", cwd);
+      if (Array.isArray(cmd)) args.push(...cmd.map(String));
+      else if (typeof cmd === "string" && cmd) args.push(cmd);
+    
+      let proc;
+      try {
+        proc = pty.spawn(TMUX, args, {
+          name: "xterm-256color",
+          cols: clamp(cols, 20, 500, 80),
+          rows: clamp(rows, 5, 200, 24),
+          cwd: (typeof cwd === "string" && cwd) || process.env.HOME,
+          env: terminalEnvironment(),
+          // Bytes, not strings: see the header. node-pty hands back Buffers
+          // when the encoding is null, and they go over the wire as base64.
+          encoding: null,
+        });
+      } catch (err) {
+        send({ e: "error", session, msg: `tmux client spawn failed: ${err.message}` });
+        return;
+      }
+      const client = `c${nextClient++}`;
+      const rec = { proc, session, closing: false, tail: "" };
+      clients.set(client, rec);
+      send({ e: "open", client, session });
+      proc.onData((data) => {
+        const buf = Buffer.from(data);
+        rec.tail = (rec.tail + buf.toString("utf8")).slice(-512);
+        send({ e: "out", client, session, d: buf.toString("base64") });
+      });
+      proc.onExit(({ exitCode, signal }) => {
+        clients.delete(client);
+        send({
+          e: "exit", client, session,
+          code: exitCode, signal: signal ?? null, reason: exitReason(rec),
+        });
+      });
+    }
+    
+    function kill({ session }) {
+      if (typeof session !== "string" || !session) {
+        send({ e: "error", session, msg: "kill needs a session" });
+        return;
+      }
+      // `=` pins exact-match — plain -t would prefix-match "s1" to "s10".
+      execFile(TMUX, ["-L", NS, "kill-session", "-t", "=" + session],
+        (err, _stdout, stderr) => {
+          if (err) send({ e: "error", session, msg: String(stderr || err.message).trim() });
+          else send({ e: "killed", session });
+        });
+    }
+    
+    // client id wins over session; session addresses all its clients.
+    function targets(msg) {
+      if (msg.client != null) {
+        const rec = clients.get(msg.client);
+        return rec ? [[msg.client, rec]] : [];
+      }
+      if (msg.session != null) {
+        return [...clients].filter(([, r]) => r.session === msg.session);
+      }
+      return [];
+    }
+    
+    function handle(msg) {
+      switch (msg.c) {
+        case "open": return open(msg);
+        case "kill": return kill(msg);
+        case "in": {
+          const [first] = targets(msg);          // one client only: tmux
+          if (!first) break;                     // mirrors input server-side
+          if (typeof msg.d === "string") first[1].proc.write(Buffer.from(msg.d, "base64"));
+          return;
+        }
+        case "resize": {
+          const t = targets(msg);
+          if (!t.length) break;
+          for (const [, rec] of t) {
+            try {
+              rec.proc.resize(clamp(msg.cols, 20, 500, 80), clamp(msg.rows, 5, 200, 24));
+            } catch { /* raced with exit */ }
+          }
+          return;
+        }
+        case "close": {
+          const t = targets(msg);
+          if (!t.length) break;
+          for (const [, rec] of t) {
+            rec.closing = true;
+            try { rec.proc.kill(); } catch { /* already gone */ }
+          }
+          return;
+        }
+        default:
+          send({ e: "error", msg: `unknown command: ${JSON.stringify(msg.c)}` });
+          return;
+      }
+      // fallthrough from in/resize/close: nothing matched the address
+      send({ e: "error", client: msg.client, session: msg.session, msg: "no such client/session" });
+    }
+    
+    createInterface({ input: process.stdin }).on("line", (line) => {
+      if (!line.trim()) return;
+      let msg;
+      try { msg = JSON.parse(line); } catch { return; }
+      try { handle(msg); } catch (e) {
+        send({ e: "error", client: msg.client, session: msg.session, msg: e.message });
+      }
+    });
+    
+    // The parent dying must not leave clients behind: stdin closing is the
+    // signal, since the pipe outlives nothing. Killing a client is only a
+    // DETACH — the tmux sessions keep running, which is the point (§15:
+    // "hub restarts → sessions untouched").
+    const detachAll = () => {
+      for (const rec of clients.values()) {
+        rec.closing = true;
+        try { rec.proc.kill(); } catch { /* gone */ }
+      }
+      clients.clear();
+    };
+    process.stdin.on("close", () => { detachAll(); process.exit(0); });
+    process.on("SIGTERM", () => { detachAll(); process.exit(0); });
+    process.on("SIGINT", () => { detachAll(); process.exit(0); });
+    
+    send({ e: "ready", ns: NS });
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/terminal-config.mjs
+  version: "1.0.0"
+  path: "agent/terminal-config.mjs"
+  sha256: "fa61b65c595e4fb1ce4447b5e319c61624c453492fb9926bf5ef4df2fd88cc6b"
+  content: |
+    import { execFileSync } from 'node:child_process';
+    
+    // The host may run under an automation tool that disables ANSI output. A
+    // terminal card is an interactive, truecolor terminal with its own preferences.
+    const colorOverrides = ['NO_COLOR', 'FORCE_COLOR', 'CLICOLOR', 'CLICOLOR_FORCE'];
+    export function terminalEnvironment(base = process.env) {
+      const env = { ...base, TERM: 'xterm-256color', COLORTERM: 'truecolor', TONK_TERMINAL: '1' };
+      for (const key of colorOverrides) delete env[key];
+      return env;
+    }
+    
+    // Shared by attached PTYs and the hub's detached `new` operation. These
+    // settings affect only the dedicated Tonk socket, never the user's tmux.
+    export function configureTerminalNamespace(tmux, namespace) {
+      const run = args => execFileSync(tmux, ['-L', namespace, ...args], {
+        env: terminalEnvironment(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      run([
+        'start-server',
+        ';', 'set', '-s', 'exit-empty', 'off',
+        ';', 'set', '-g', 'status', 'off',
+        ';', 'set', '-g', 'window-size', 'latest',
+        ';', 'set', '-g', 'default-terminal', 'tmux-256color',
+        ';', 'set', '-g', 'history-limit', '10000',
+        // tmux owns the alternate screen and its history. Mouse reporting lets
+        // it scroll history (or forward the wheel to a mouse-aware application).
+        // Without it, xterm translates wheel gestures into Up/Down keystrokes.
+        ';', 'set', '-g', 'mouse', 'on',
+        // The default first wheel only enters copy mode. Scroll immediately,
+        // then use the same small step in both copy-mode key tables. -e exits
+        // history automatically when the reader scrolls back to the bottom.
+        ';', 'bind-key', '-n', 'WheelUpPane', 'if-shell', '-F',
+        '#{||:#{pane_in_mode},#{mouse_any_flag}}', 'send-keys -M',
+        'copy-mode -e; send-keys -X -N 3 scroll-up',
+        ...['copy-mode', 'copy-mode-vi'].flatMap(table => [
+          ';', 'bind-key', '-T', table, 'WheelUpPane', 'send-keys', '-X', '-N', '3', 'scroll-up',
+          ';', 'bind-key', '-T', table, 'WheelDownPane', 'send-keys', '-X', '-N', '3', 'scroll-down',
+        ]),
+        // Also repair a server that was started before this configuration existed.
+        ...colorOverrides.flatMap(key => [';', 'set-environment', '-gr', key]),
+        ';', 'set-environment', '-g', 'COLORTERM', 'truecolor',
+        ';', 'set-environment', '-g', 'TONK_TERMINAL', '1',
+      ]);
+      const feature = 'xterm-256color:256:RGB';
+      const features = run(['show-options', '-sv', 'terminal-features']).trim().split('\n');
+      if (!features.includes(feature)) {
+        run(['set', '-as', 'terminal-features', ',' + feature]);
+      }
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/terminal-title.mjs
+  version: "1.0.0"
+  path: "agent/terminal-title.mjs"
+  sha256: "e7d93b21b103b5268830c91dc7dd85a4c8efd18694682ebc8c3389de561f9dda"
+  content: |
+    // Prefer a meaningful application-supplied OSC title; otherwise show process
+    // and directory. No screen scraping, model calls, or terminal-content storage.
+    export function terminalTitle({ cmd = '', cwd = '', paneTitle = '' }, host = '') {
+      const clean = value => String(value).replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 120);
+      const process = clean(cmd) || 'Shell';
+      const directory = clean(cwd).split('/').filter(Boolean).pop() || '';
+      const title = clean(paneTitle);
+      if (title && title !== host && title !== cmd && title !== cwd && !/^\/?(?:dev\/)?ttys?\d+$/.test(title)) return title;
+      return directory ? `${process} · ${directory}` : process;
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/bus.mjs
+  version: "1.0.0"
+  path: "agent/bus.mjs"
+  sha256: "92c2c60b0d390da79d5afa6415412c0ed86204a412e9bf2a02e946440e2aa685"
+  content: |
+    // The message bus: one envelope shape, pluggable channels, kind-based routing.
+    //
+    // Runners subscribe by kind ("simulation.run", "frame.*"). Channels are
+    // adapters that speak one wire each (relay WebSocket, Tonk durable facts, a
+    // local socket) and turn it into envelopes. A runner never sees which channel
+    // delivered a message; a reply goes back through the channel that delivered
+    // the request. The routing policy (which kinds leave through which channel)
+    // is configuration on the bus, not knowledge in the callers.
+    //
+    // Envelope: { id, kind, payload, at, from?: { channel, peer }, to?, via?,
+    //             replyTo?, durable?, live?, change?, reply(payload) }
+    //
+    // Delivery semantics are carried on the envelope, not hidden: a durable
+    // envelope (from facts) may be redelivered after a restart, so its handler
+    // must be idempotent; the bus itself drops repeats of a durable id it has
+    // already delivered in this process. A live envelope (from a socket) is
+    // best effort and point to point.
+    
+    export function matchesKind(pattern, kind) {
+      if (pattern === '*' || pattern === kind) return true;
+      if (pattern.endsWith('.*')) return kind.startsWith(pattern.slice(0, -1));
+      return false;
+    }
+    
+    let seq = 0;
+    export const newId = (prefix = 'm') => `${prefix}-${Date.now().toString(36)}-${(++seq).toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    
+    export function createBus({ log = () => {}, dedupeSize = 5000, now = () => Date.now() } = {}) {
+      const subscribers = [];
+      const channels = new Map();
+      const routes = [];                     // { pattern, channel }
+      const pending = new Map();             // request id -> { resolve, reject, timer }
+      const seen = new Map();                // durable envelope id -> at
+      const stats = { delivered: 0, dropped: 0, duplicates: 0, sent: 0, unrouted: 0 };
+      let started = false;
+    
+      function remember(id) {
+        seen.set(id, now());
+        if (seen.size > dedupeSize) { const oldest = seen.keys().next().value; seen.delete(oldest); }
+      }
+      function envelope(kind, payload, extra = {}) {
+        if (typeof kind !== 'string' || !/^[a-z][a-z0-9-]*(\.[a-z0-9*-]+)*$/i.test(kind)) throw new Error(`Bad envelope kind ${JSON.stringify(kind)}`);
+        return { id: extra.id || newId(), kind, payload, at: now(), ...extra };
+      }
+      function bind(env) {
+        // A reply follows the request back: to the peer, through the channel it came from.
+        env.reply = (payload, extra = {}) => send(extra.kind || `${env.kind}.reply`, payload, { replyTo: env.id, to: env.from?.peer, via: env.from?.channel, ...extra });
+        return env;
+      }
+    
+      // Inbound: a channel (or a local emit) hands the bus an envelope.
+      async function deliver(env) {
+        if (env.durable && env.id && seen.has(env.id)) { stats.duplicates++; return { delivered: 0, duplicate: true }; }
+        if (env.durable && env.id) remember(env.id);
+        if (env.replyTo && pending.has(env.replyTo)) {
+          const p = pending.get(env.replyTo); pending.delete(env.replyTo); clearTimeout(p.timer);
+          if (env.error) p.reject(env.error instanceof Error ? env.error : new Error(String(env.error))); else p.resolve(env);
+          return { delivered: 1, reply: true };
+        }
+        bind(env);
+        const handlers = subscribers.filter(s => matchesKind(s.pattern, env.kind));
+        if (!handlers.length) { stats.dropped++; return { delivered: 0 }; }
+        let delivered = 0;
+        for (const s of handlers) {
+          try { await s.handler(env); delivered++; }
+          catch (e) { log(`bus: handler for ${env.kind} failed: ${e.message}`); }
+        }
+        stats.delivered += delivered;
+        return { delivered };
+      }
+    
+      function channelFor(env) {
+        if (env.via) return channels.get(env.via) || null;
+        const route = routes.find(r => matchesKind(r.pattern, env.kind));
+        return route ? channels.get(route.channel) || null : null;
+      }
+    
+      // Outbound: route to a channel; with no route, deliver locally.
+      async function send(kind, payload, extra = {}) {
+        const env = envelope(kind, payload, extra);
+        const channel = channelFor(env);
+        if (!channel) {
+          if (env.via) throw new Error(`bus: no channel named ${env.via}`);
+          stats.unrouted++;
+          await deliver(env);
+          return env;
+        }
+        const ok = await channel.send(env);
+        if (ok === false) throw Object.assign(new Error(`bus: channel ${channel.name} refused ${kind}`), { code: 'refused', envelope: env });
+        stats.sent++;
+        return env;
+      }
+      const emit = (kind, payload, extra = {}) => deliver(bind(envelope(kind, payload, extra)));
+    
+      function request(kind, payload, { timeoutMs = 30000, ...extra } = {}) {
+        const env = envelope(kind, payload, extra);
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => { pending.delete(env.id); reject(Object.assign(new Error(`bus: no reply to ${kind} within ${timeoutMs}ms`), { code: 'timeout' })); }, timeoutMs);
+          pending.set(env.id, { resolve, reject, timer });
+          send(kind, payload, { ...extra, id: env.id }).catch(e => { pending.delete(env.id); clearTimeout(timer); reject(e); });
+        });
+      }
+    
+      function subscribe(pattern, handler) {
+        if (typeof handler !== 'function') throw new Error('bus: subscribe needs a handler');
+        const s = { pattern, handler };
+        subscribers.push(s);
+        return () => { const i = subscribers.indexOf(s); if (i >= 0) subscribers.splice(i, 1); };
+      }
+    
+      async function addChannel(channel, { routes: patterns = [] } = {}) {
+        if (!channel || typeof channel.name !== 'string' || typeof channel.send !== 'function') throw new Error('bus: a channel needs a name and send()');
+        if (channels.has(channel.name)) throw new Error(`bus: channel ${channel.name} already added`);
+        channels.set(channel.name, channel);
+        for (const pattern of patterns) routes.push({ pattern, channel: channel.name });
+        if (started && channel.start) await channel.start({ deliver, log });
+      }
+      async function removeChannel(name) {
+        const channel = channels.get(name); if (!channel) return;
+        channels.delete(name);
+        for (let i = routes.length - 1; i >= 0; i--) if (routes[i].channel === name) routes.splice(i, 1);
+        if (started && channel.stop) await channel.stop();
+      }
+      async function start() {
+        started = true;
+        for (const channel of channels.values()) if (channel.start) await channel.start({ deliver, log });
+      }
+      // Reject every outstanding request, for example when the link behind them dropped.
+      function failPending(reason = 'link down') { for (const [id, p] of pending) { clearTimeout(p.timer); pending.delete(id); p.reject(Object.assign(new Error(reason), { code: 'link-down' })); } }
+      async function stop() {
+        started = false;
+        for (const channel of [...channels.values()].reverse()) { try { if (channel.stop) await channel.stop(); } catch (e) { log(`bus: channel ${channel.name} stop failed: ${e.message}`); } }
+        for (const [id, p] of pending) { clearTimeout(p.timer); p.reject(new Error('bus stopped')); pending.delete(id); }
+      }
+      return { subscribe, send, emit, request, deliver, addChannel, removeChannel, start, stop, failPending,
+        channels: () => [...channels.keys()], routes: () => routes.map(r => ({ ...r })), kinds: () => subscribers.map(s => s.pattern), stats: () => ({ ...stats }) };
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/relay-bridge.mjs
+  version: "1.0.0"
+  path: "agent/relay-bridge.mjs"
+  sha256: "ff1f82c4d777276b586bb5ca8a8f02a3f7d74a242ec47ff9d2155994215909fd"
+  content: |
+    // The relay bridge, kept for callers of startRelayBridge: the relay channel
+    // plus the hub socket bridge on a private bus. The host (agent/host.mjs)
+    // wires the same two pieces itself; this file is the compatibility entry.
+    import { createBus } from './bus.mjs';
+    import { createRelayChannel, allowedFrame } from './channels/relay.mjs';
+    import { createSocketBridge } from './runners/hub.mjs';
+    export { allowedFrame };
+    
+    export function startRelayBridge({ url, room, token, socketPath, log = console.log }) {
+      const bus = createBus({ log });
+      const channel = createRelayChannel({ url, room, token, log });
+      const bridge = createSocketBridge({ bus, socketPath, log, channel: channel.name });
+      const started = bus.addChannel(channel, { routes: ['frame.*', 'peer.*'] }).then(() => bus.start()).then(() => bridge.start());
+      started.catch(e => log('relay bridge failed to start: ' + e.message));
+      return { close() { bridge.stop(); bus.stop().catch(() => {}); } };
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/channels/relay.mjs
+  version: "1.0.0"
+  path: "agent/channels/relay.mjs"
+  sha256: "1c3bf6cd1faf6975cbe6ca34ee26623ec8aa6cd7975abf2496ec94d0ad70d5ec"
+  content: |
+    // The relay channel: the Cloudflare session relay as a bus channel.
+    //
+    // Inbound: a browser peer's frame arrives as a live envelope of kind
+    // "frame.<t>" with from.peer set; peer arrivals and departures are
+    // "peer.open" and "peer.close". Outbound: a "frame.*" envelope with `to`
+    // (the peer id) goes to that browser; "peer.detach" asks the relay to reset
+    // a browser connection. The allowlist is the same one the relay enforces.
+    
+    import { connectSession } from '../../session/relay-client.mjs';
+    
+    export const ALLOWED_BROWSER_FRAMES = ['ping', 'pong', 'conv-open', 'conv-close', 'say', 'stop', 'permission-response', 'chat-model', 'session-rename', 'term-open', 'term-in', 'term-resize', 'term-close', 'term-kill', 'language-submit', 'language-cancel'];
+    export const allowedFrame = f => f && typeof f === 'object' && !('c' in f) && ALLOWED_BROWSER_FRAMES.includes(f.t);
+    
+    export function createRelayChannel({ url, room, token, name = 'relay', connect = connectSession, log = () => {} } = {}) {
+      if (!url || !room || !token) throw new Error('relay channel needs url, room and token');
+      let link = null, deliver = null, status = 'stopped';
+      const peers = new Set();
+      return {
+        name, capabilities: { durable: false, live: true }, status: () => status, peers: () => [...peers],
+        async start(ctx) {
+          deliver = ctx.deliver;
+          link = connect({ url, room, token, role: 'host',
+            onStatus(s, detail) {
+              status = s;
+              log(`relay host: ${s}${detail ? ` (${detail.code}: ${detail.reason})` : ''}`);
+              if (s !== 'connected') { for (const peer of [...peers]) { peers.delete(peer); deliver({ id: undefined, kind: 'peer.close', payload: { peer, reason: 'relay-' + s }, at: Date.now(), from: { channel: name, peer }, live: true }); } }
+            },
+            onMessage(m) {
+              if (m.type === 'peer-open') { peers.add(m.peer); return deliver({ kind: 'peer.open', payload: { peer: m.peer }, at: Date.now(), from: { channel: name, peer: m.peer }, live: true }); }
+              if (m.type === 'peer-close') { peers.delete(m.peer); return deliver({ kind: 'peer.close', payload: { peer: m.peer, reason: 'closed' }, at: Date.now(), from: { channel: name, peer: m.peer }, live: true }); }
+              if (m.type === 'data' && allowedFrame(m.data) && peers.has(m.peer)) return deliver({ kind: 'frame.' + m.data.t, payload: m.data, at: Date.now(), from: { channel: name, peer: m.peer }, live: true });
+            } });
+        },
+        async stop() { status = 'stopped'; if (link) link.close(); link = null; peers.clear(); },
+        send(env) {
+          if (!link) return false;
+          if (env.kind === 'peer.detach') { peers.delete(env.to); return link.send({ type: 'detach', peer: env.to }); }
+          if (!env.kind.startsWith('frame.') || !env.to) return false;
+          const frame = env.payload;
+          if (!frame || typeof frame.t !== 'string') return false;
+          return link.send({ type: 'data', peer: env.to, data: frame });
+        },
+      };
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/agent/runners/hub.mjs
+  version: "1.0.0"
+  path: "agent/runners/hub.mjs"
+  sha256: "0fc57813ff3a27a03b8d6bee7acba7d2715afc994f1b45cd2311f7ad1b723131"
+  content: |
+    // Hub runner: terminal sessions, chat routing and the RTC answerer, exactly
+    // as agent/hub.mjs provides them, plus the bridge between the bus and the
+    // hub's socket door. Browser peers reach the hub as "frame.*" envelopes from
+    // the relay channel; each peer gets one local socket to the hub, so the
+    // hub's per-connection ownership rules are unchanged. Hub output frames go
+    // back through the bus to the peer they belong to.
+    
+    import net from 'node:net';
+    
+    export const name = 'hub';
+    export const required = true;
+    export const routes = { relay: ['frame.*', 'peer.*'] };
+    const MAX_BUFFER = 512 * 1024;
+    
+    // The bridge between relay peers on the bus and the hub's socket door. One
+    // local socket per peer keeps the hub's attachment ownership per browser.
+    export function createSocketBridge({ bus, socketPath, log = () => {}, channel = 'relay' }) {
+      const peers = new Map();       // peer id -> socket
+      const unsubscribes = [];
+      const drop = (peer, detach = true) => {
+        const sock = peers.get(peer); peers.delete(peer);
+        if (sock) sock.destroy();
+        if (detach) bus.send('peer.detach', {}, { via: channel, to: peer }).catch(() => {});
+      };
+      function open(peer) {
+        drop(peer, false);
+        const sock = net.createConnection(socketPath);
+        peers.set(peer, sock);
+        sock.setEncoding('utf8');
+        let buffer = '';
+        sock.on('data', chunk => {
+          buffer += chunk;
+          if (buffer.length > MAX_BUFFER) return drop(peer);
+          let end;
+          while ((end = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0, end); buffer = buffer.slice(end + 1);
+            let frame; try { frame = JSON.parse(line); } catch { continue; }
+            if (!frame || typeof frame.t !== 'string') continue;
+            bus.send('frame.' + frame.t, frame, { via: channel, to: peer, live: true }).catch(() => {
+              // Reconnect rather than silently corrupt an incomplete terminal stream.
+              log('hub: relay output backpressure; detaching browser');
+              drop(peer);
+            });
+          }
+        });
+        sock.on('error', () => drop(peer));
+        sock.on('close', () => { if (peers.get(peer) === sock) drop(peer); });
+      }
+      return {
+        start() {
+          unsubscribes.push(
+            bus.subscribe('peer.open', env => { if (env.from?.channel === channel) open(env.payload.peer); }),
+            bus.subscribe('peer.close', env => { if (env.from?.channel === channel) drop(env.payload.peer, false); }),
+            bus.subscribe('frame.*', env => {
+              if (env.from?.channel !== channel) return;
+              const sock = peers.get(env.from.peer);
+              if (!sock || sock.writableLength > MAX_BUFFER) return drop(env.from.peer);
+              sock.write(JSON.stringify(env.payload) + '\n');
+            }));
+        },
+        stop() { for (const u of unsubscribes.splice(0)) u(); for (const peer of [...peers.keys()]) drop(peer, false); },
+        peers: () => [...peers.keys()],
+      };
+    }
+    
+    export function create(ctx) {
+      const { config, io, bus, root, log } = ctx;
+      let hub = null, bridge = null;
+      return {
+        async start() {
+          const { createHub } = await import('../hub.mjs');
+          hub = createHub({ io, spot: config.space, ndc: null, terminal: true, terminalCwd: config.cwd || root, maxSessions: config.maxSessions || 8,
+            agent: config.name || 'dashboard-host', createLanguageService: ctx.services.get('languageService') || undefined });
+          await hub.start();
+          ctx.provide('hubSocketPath', hub.socketPath);
+          bridge = createSocketBridge({ bus, socketPath: hub.socketPath, log });
+          bridge.start();
+        },
+        async stop() {
+          if (bridge) bridge.stop(); bridge = null;
+          if (hub) await hub.stop();
+          hub = null;
+        },
+        health: () => ({ socket: hub ? hub.socketPath : null, peers: bridge ? bridge.peers().length : 0, connections: hub ? hub.conns.size : 0 }),
+      };
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/session/relay-client.mjs
+  version: "1.0.0"
+  path: "session/relay-client.mjs"
+  sha256: "543c4331751726ea5d05a2ad1981093d66dea1890869abb36c51d68538565fbf"
+  content: |
+    // Shared Node/browser client. Commands are never replayed across disconnects.
+    export function connectSession({ url, room, token, role, onMessage = () => {}, onStatus = () => {} }) {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'wss:' && !(parsed.protocol === 'ws:' && ['localhost', '127.0.0.1'].includes(parsed.hostname))) throw new Error('Relay URL must use WSS');
+      let ws, stopped = false, retry, heartbeat, deadline, backoff = 500, authenticated = false;
+      const closeTimers = () => { clearInterval(heartbeat); clearTimeout(deadline); };
+      const send = m => {
+        if (!authenticated || ws?.readyState !== 1 || ws.bufferedAmount > 512 * 1024) return false;
+        const raw = JSON.stringify({ v: 1, ...m });
+        if (new TextEncoder().encode(raw).length > 256 * 1024) return false;
+        ws.send(raw); return true;
+      };
+      const dial = () => {
+        if (stopped) return;
+        authenticated = false; onStatus('connecting');
+        const socket = ws = new WebSocket(url);
+        // Every failure path ends in settle(), once per socket. Node (undici) emits no 'close' after a failed
+        // handshake or for a dead peer, and close() on a CONNECTING socket re-fires 'error' synchronously, so
+        // neither "wait for onclose" nor "close() from onerror" is safe there.
+        let settled = false;
+        const settle = (code = 1006, reason = '') => {
+          if (settled) return;
+          settled = true;
+          try { socket.close(); } catch {}
+          if (ws !== socket) return;
+          authenticated = false; closeTimers();
+          const fatal = [4001, 1008, 1009].includes(code);
+          onStatus(fatal ? 'authentication-or-protocol-error' : 'disconnected', { code, reason });
+          if (!stopped && !fatal) {
+            retry = setTimeout(dial, backoff * (0.75 + Math.random() * 0.5));
+            backoff = Math.min(15000, backoff * 2);
+          }
+        };
+        deadline = setTimeout(() => settle(1006, 'connect timeout'), 10000);
+        socket.onopen = () => socket.send(JSON.stringify({ v: 1, type: 'auth', role, room, token }));
+        socket.onmessage = event => {
+          if (ws !== socket) return;
+          let m; try { m = JSON.parse(String(event.data)); } catch { return; }
+          if (m.v !== 1) return;
+          if (m.type === 'ready') {
+            authenticated = true; backoff = 500; clearTimeout(deadline);
+            onStatus('connected');
+            heartbeat = setInterval(() => {
+              if (!send({ type: 'ping' })) return settle(1006, 'ping not sent');
+              deadline = setTimeout(() => settle(1006, 'pong timeout'), 10000);
+            }, 15000);
+          }
+          if (m.type === 'pong') { clearTimeout(deadline); return; }
+          onMessage(m);
+        };
+        socket.onerror = () => settle(1006, 'socket error');
+        socket.onclose = event => settle(event.code, event.reason);
+      };
+      dial();
+      return { send, close() { stopped = true; token = ''; clearTimeout(retry); closeTimers(); authenticated = false; ws?.close(); } };
+    }
+    
+
+terminal/setup-file!:
+  this: id:terminal/setup-file/1.0.0/worker/relay.ts
+  version: "1.0.0"
+  path: "worker/relay.ts"
+  sha256: "21c5f430e28b9f4f639a1ae886a545aadb79f8214bdf6cb50a94d12aced6cf54"
+  content: |
+    import { DurableObject } from 'cloudflare:workers';
+    
+    export interface Env {
+      SESSIONS: DurableObjectNamespace<SessionRoom>;
+      SESSION_ROOM: string;
+      BROWSER_TOKEN: string;
+      HOST_TOKEN: string;
+      UPGRADE_LIMITER: RateLimit;
+    }
+    type Role = 'browser' | 'host';
+    type Attachment = { id: string; role?: Role; deadline: number; closed?: boolean; window: number; bytes: number; frames: number };
+    const MAX_FRAME = 256 * 1024;
+    const encoder = new TextEncoder();
+    const equal = (a: unknown, b: string) => {
+      if (typeof a !== 'string' || !b) return false;
+      const x = encoder.encode(a), y = encoder.encode(b);
+      return x.length === y.length && crypto.subtle.timingSafeEqual(x, y);
+    };
+    const object = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
+    const allowed = new Set(['ping','pong','conv-open','conv-close','say','stop','permission-response','chat-model','session-rename','term-open','term-in','term-resize','term-close','term-kill','language-submit','language-cancel']);
+    export const browserFrame = (v: unknown) => object(v) && !('c' in v) && allowed.has(v.t);
+    
+    export default {
+      async fetch(request, env): Promise<Response> {
+        const url = new URL(request.url);
+        if (url.pathname === '/health') return Response.json({ service: 'agent-session-relay', version: 1 });
+        if (url.pathname !== '/ws') return new Response('Not found', { status: 404 });
+        if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('WebSocket required', { status: 426 });
+        if (!env.BROWSER_TOKEN || !env.HOST_TOKEN || !env.SESSION_ROOM) return new Response('Not configured', { status: 503 });
+        const limit = await env.UPGRADE_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' });
+        if (!limit.success) return new Response('Rate limited', { status: 429 });
+        return env.SESSIONS.getByName(env.SESSION_ROOM).fetch(request);
+      },
+    } satisfies ExportedHandler<Env>;
+    
+    // Like the creative-intelligence relay, this keeps socket state in hibernation
+    // attachments. No terminal bytes, chat history or credentials are persisted.
+    export class SessionRoom extends DurableObject<Env> {
+      peers() {
+        return this.ctx.getWebSockets().map(ws => ({ ws, a: ws.deserializeAttachment() as Attachment })).filter(p => p.a && !p.a.closed);
+      }
+      send(ws: WebSocket, m: unknown) { try { ws.send(JSON.stringify(m)); } catch { this.close(ws, 1011, 'Send failed'); } }
+      close(ws: WebSocket, code: number, reason: string) {
+        const a = ws.deserializeAttachment() as Attachment;
+        if (!a || a.closed) return;
+        a.closed = true; ws.serializeAttachment(a);
+        // Deferred peer closes avoid the workerd inline callback destruction bug.
+        setTimeout(() => { try { ws.close(code, reason); } catch {} }, 0);
+        this.depart(a);
+      }
+      depart(a: Attachment) {
+        if (a.role === 'host') {
+          for (const p of this.peers().filter(p => p.a.role === 'browser')) this.send(p.ws, { v: 1, type: 'host-status', online: false });
+        } else if (a.role === 'browser') {
+          const h = this.peers().find(p => p.a.role === 'host');
+          if (h) this.send(h.ws, { v: 1, type: 'peer-close', peer: a.id });
+        }
+      }
+      async schedule() {
+        const deadlines = this.peers().map(p => p.a.deadline);
+        if (deadlines.length) await this.ctx.storage.setAlarm(Math.min(...deadlines));
+        else await this.ctx.storage.deleteAlarm();
+      }
+      async alarm() {
+        for (const p of this.peers()) if (p.a.deadline <= Date.now()) this.close(p.ws, 4004, 'Lease expired');
+        await this.schedule();
+      }
+      async fetch(): Promise<Response> {
+        await this.alarm();
+        if (this.peers().length >= 24) return new Response('Room full', { status: 503 });
+        const pair = new WebSocketPair();
+        this.ctx.acceptWebSocket(pair[1]);
+        const a: Attachment = { id: crypto.randomUUID(), deadline: Date.now() + 5000, window: Date.now(), bytes: 0, frames: 0 };
+        pair[1].serializeAttachment(a);
+        await this.schedule();
+        return new Response(null, { status: 101, webSocket: pair[0] });
+      }
+      async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
+        const a = ws.deserializeAttachment() as Attachment;
+        if (a.closed) return;
+        if (a.deadline <= Date.now()) return this.close(ws, 4004, 'Lease expired');
+        if (typeof raw !== 'string' || encoder.encode(raw).length > MAX_FRAME) return this.close(ws, 1009, 'Frame too large');
+        const now = Date.now();
+        if (now - a.window >= 1000) { a.window = now; a.frames = 0; a.bytes = 0; }
+        a.frames++; a.bytes += encoder.encode(raw).length;
+        if (a.frames > 512 || a.bytes > 4 * 1024 * 1024) return this.close(ws, 1013, 'Rate limited; retry');
+        let m: any;
+        try { m = JSON.parse(raw); } catch { return this.close(ws, 1008, 'Invalid JSON'); }
+        if (!object(m) || m.v !== 1) return this.close(ws, 1008, 'Invalid protocol');
+        if (!a.role) {
+          const token = m.role === 'host' ? this.env.HOST_TOKEN : m.role === 'browser' ? this.env.BROWSER_TOKEN : '';
+          if (m.type !== 'auth' || m.room !== this.env.SESSION_ROOM || !equal(m.token, token)) return this.close(ws, 4001, 'Unauthorized');
+          if (m.role === 'host' && this.peers().some(p => p.a.role === 'host')) return this.close(ws, 4002, 'Host already connected');
+          if (m.role === 'browser' && this.peers().filter(p => p.a.role === 'browser').length >= 16) return this.close(ws, 4002, 'Room full');
+          a.role = m.role; a.deadline = now + 45000; ws.serializeAttachment(a);
+          const host = this.peers().find(p => p.a.role === 'host');
+          this.send(ws, { v: 1, type: 'ready', peer: a.id, online: !!host });
+          if (a.role === 'host') {
+            for (const p of this.peers().filter(p => p.a.role === 'browser')) {
+              this.send(p.ws, { v: 1, type: 'host-status', online: true });
+              this.send(ws, { v: 1, type: 'peer-open', peer: p.a.id });
+            }
+          } else if (host) this.send(host.ws, { v: 1, type: 'peer-open', peer: a.id });
+          await this.schedule();
+          return;
+        }
+        a.deadline = now + 45000; ws.serializeAttachment(a);
+        if (m.type === 'ping') { this.send(ws, { v: 1, type: 'pong' }); return; }
+        if (a.role === 'host' && m.type === 'detach') {
+          const p = this.peers().find(p => p.a.role === 'browser' && p.a.id === m.peer);
+          if (p) this.close(p.ws, 1012, 'Host connection reset');
+          return;
+        }
+        if (m.type !== 'data' || !object(m.data)) return this.close(ws, 1008, 'Invalid message');
+        if (a.role === 'browser') {
+          if (!browserFrame(m.data)) return this.close(ws, 1008, 'Unsupported client frame');
+          const h = this.peers().find(p => p.a.role === 'host');
+          if (!h) { this.send(ws, { v: 1, type: 'host-status', online: false }); return; }
+          this.send(h.ws, { v: 1, type: 'data', peer: a.id, data: m.data });
+        } else {
+          const p = this.peers().find(p => p.a.role === 'browser' && p.a.id === m.peer);
+          if (p) this.send(p.ws, { v: 1, type: 'data', data: m.data });
+        }
+      }
+      async webSocketClose(ws: WebSocket) {
+        const a = ws.deserializeAttachment() as Attachment;
+        if (a && !a.closed) { a.closed = true; ws.serializeAttachment(a); this.depart(a); }
+        try { ws.close(); } catch {}
+        await this.schedule();
+      }
+      async webSocketError(ws: WebSocket) { this.close(ws, 1011, 'Socket error'); await this.schedule(); }
+    }
+    
