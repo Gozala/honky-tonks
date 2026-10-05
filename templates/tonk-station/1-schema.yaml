@@ -1399,7 +1399,7 @@ concept!:
       description: "The axum/matchit path pattern."
 
 ---
-concept!: &db/branch
+concept!:
   this: concept:branch
   description: "A branch on some replica (see `tonk:replica`). Individual replicas can\ncreate same-named branches that sit at different revisions, which is\nwhy a branch is unique per replica rather than per repository.\n"
   with:
@@ -1430,7 +1430,7 @@ concept!: &db/branch
       description: "The tree root of this branch"
 
 ---
-concept!: &db/session
+concept!:
   this: concept:session
   description: "Database session information"
   with:
