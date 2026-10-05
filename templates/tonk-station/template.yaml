@@ -1,0 +1,55 @@
+schemaVersion: 1
+slug: tonk-station
+name: Tonk Station
+summary: A deck-based workspace for people and agents. Arrange notes, spreadsheets, tables, a calendar, maps, weather and terminals as cards on horizontal decks, and hand work to agents as tasks.
+description: |
+  Tonk Station is a productivity dashboard built from Tonk facts. A sidebar holds decks and folders. Each deck is a horizontal strip of cards, and each card is an artifact: a Markdown note, a spreadsheet with formulas, a table of records, a calendar, a Google map, a weather forecast or a live terminal.
+  Press Command-K (Ctrl-K) to add an artifact and Command-I (Ctrl-I) to put an existing one back on the strip. Cards can be stacked, resized, focused and closed without losing their data. Everything syncs to everyone in the space.
+  Agent tasks gives agents a durable queue: ask for work in plain language, schedule it for later, answer questions and see progress and outputs. The shared AGENTS.md guide explains the task protocol and the visual style rules to connected agents.
+category: Workspace
+version: 1.0.0
+license: MIT
+author:
+  name: Tonk
+  url: https://tonk.xyz
+  contact: mailto:hello@tonk.xyz
+features:
+  - Decks and folders in a sidebar, with inline rename, drag to reorder and delete confirmation
+  - Horizontal card strip with stacking, resizing, focus mode and keyboard navigation
+  - Command-K artifact palette and Command-I instance picker
+  - Markdown notes with code blocks, tables and Mermaid diagrams
+  - Spreadsheets with formulas and multiple sheets, and record tables with filters and sorting
+  - Calendar with month, week, day and schedule views
+  - Weather forecasts with no API key, and Google maps with your own key
+  - Live terminal cards through an optional self-hosted relay
+  - Agent tasks with scheduling, questions, cancellation, retry and progress history
+  - Light and dark appearance that follows the system
+images:
+  - file: preview.png
+    alt: A Tonk Station deck with a day calendar, a Markdown note, a spreadsheet and a to-do table side by side, and the deck sidebar on the left
+    caption: Screenshot of a Tonk Station deck in a Tonk space.
+files:
+  - file: 1-schema.yaml
+    description: Attributes and concepts for decks, cards, instances, settings, commands, tasks, terminal setup and every artifact kind.
+  - file: 2-rules.yaml
+    description: Rules that turn deck, card, setting and artifact commands into durable facts.
+  - file: 3-terminal-setup.yaml
+    description: The portable terminal setup package (host script, relay worker source and setup guide) carried as text.
+  - file: 4-views.yaml
+    description: Views, view bindings, routes, custom elements and DOM events for the workspace shell and the deck.
+  - file: 5-components.yaml
+    description: Deck, sidebar, artifact kinds, chat, terminal and Agent tasks components.
+  - file: 6-apps.yaml
+    description: Sandboxed portal apps for spreadsheets, tables, maps, notes, terminals and weather.
+  - file: 7-agents.yaml
+    description: The shared agent guide (AGENTS.md) with the task protocol and visual style rules, set on the space itself.
+entrypoint: deck/canvas
+compatibility: Tonk CLI 0.6.17-rc.2 and its standard library. Installed in file order into a fresh local space and a fresh hosted space on 2026-10-05; the local install was compared fact by fact with the source space, and the agent guide round-trips exactly.
+notes: |
+  Install into a fresh space, in file order. The files point the space home (id:tonk/space) and the root route at the workspace shell, so a space that already has its own home or root route would be changed. Reinstalling the same files changes no facts. No user data is included: the first deck, main, is created on first use.
+  Shared agent guide: 7-agents.yaml sets the space's AGENTS.md claim (the guide that tonk space agents get returns) to the bundled guide: the task protocol and the visual style rules. It finds the space through db/origin, so it needs 1-schema.yaml first. It replaces any guide the space already has; skip this file to keep yours. AGENTS.md in the source folder is the same text.
+  Terminal cards need a relay you host yourself. The terminal card shows setup instructions to copy to an agent; the bundled package contains a local host script and a Cloudflare Worker relay. Credentials stay on your computer, and only browser connection settings are stored in the space.
+  Agent tasks stores requests, controls and history as facts. It does not start an agent: a separately configured worker must watch the queue and execute tasks, as described in AGENTS.md.
+  External services: weather uses Open-Meteo and OpenStreetMap Nominatim without a key. Maps use Google Maps and Places with an API key you add in Settings. Mermaid diagrams in notes load from jsDelivr. Everything else, including fonts, is embedded.
+  Location privacy: the map's locate button first asks the browser for the device location. If that is unavailable or denied, it requests an approximate location from ipwho.is, a third-party IP geolocation service, which receives the viewer's IP address. This happens only after a click on the locate button.
+  6-apps.yaml is about 2.6 MB and 5-components.yaml about 1.7 MB because each app and component bundles its own code.

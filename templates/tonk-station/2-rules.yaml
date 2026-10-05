@@ -1,0 +1,1593 @@
+# ---- 04-rules.yaml ----
+# Private schema snapshots preserve the exact installed rule descriptors.
+
+concept!: &export/compiled-0910b5df7de6d2de
+  this: id:dashboard-rc-1/export/compiled-0910b5df7de6d2de
+  with:
+    born:
+      the: xyz.tonk.deck.instance/born
+      as: unsigned-integer
+      cardinality: one
+      description: "The component nonce (ms since epoch) the instance was created at"
+    content:
+      the: xyz.tonk.deck.card/content
+      as: text
+      cardinality: one
+      description: "Kind-specific payload, as a JSON document"
+    deck:
+      the: xyz.tonk.deck.instance/deck
+      as: text
+      cardinality: one
+      description: "The `key` of the deck (tree node) that owns this instance"
+    kind:
+      the: xyz.tonk.deck.card/kind
+      as: text
+      cardinality: one
+      description: "Artifact kind (text, table)"
+
+---
+concept!: &export/compiled-0d9647f9242de4b7
+  this: id:dashboard-rc-1/export/compiled-0d9647f9242de4b7
+  with:
+    kind:
+      the: xyz.tonk.deck.card/kind
+      as: text
+      cardinality: one
+      description: "Artifact kind (text, table)"
+
+---
+concept!: &export/compiled-0f06f7da80f66d92
+  this: id:dashboard-rc-1/export/compiled-0f06f7da80f66d92
+  description: "A user-published name — an `id:<n>` entity carrying a single `entity` claim that points at the target the name currently identifies.  `this` is derived from the name string by prefixing `id:`. `entity` is the target. Asserting two `Name` claims for the same `this` with different `entity` values supersedes the prior claim because the backing attribute is cardinality one."
+  with:
+    entity:
+      the: db.name/referent
+      as: entity
+      cardinality: one
+      description: "The `db.name/referent` attribute — the entity a name currently points at. Cardinality `one` (the derive default), so re-pointing a name supersedes the prior claim instead of accumulating."
+
+---
+concept!: &export/compiled-111ef2059d083356
+  this: id:dashboard-rc-1/export/compiled-111ef2059d083356
+  with:
+    key:
+      the: xyz.tonk.deck.space/key
+      as: text
+      cardinality: one
+      description: "Opaque token columns reference the space by"
+    name:
+      the: xyz.tonk.deck.space/name
+      as: text
+      cardinality: one
+      description: "The space name shown on its pill"
+    order:
+      the: xyz.tonk.deck.space/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the pill in the switcher"
+
+---
+concept!: &export/compiled-18ec41b34426eb43
+  this: id:dashboard-rc-1/export/compiled-18ec41b34426eb43
+  with:
+    key:
+      the: dom.event.detail/deck-node-target
+      as: text
+      cardinality: one
+      description: "The `key` of the tree node to rename"
+    name:
+      the: dom.event.detail/deck-node-rename
+      as: text
+      cardinality: one
+      description: "The new tree node name"
+
+---
+concept!: &export/compiled-197eb26bcd17b5b0
+  this: id:dashboard-rc-1/export/compiled-197eb26bcd17b5b0
+  with:
+    column:
+      the: xyz.tonk.deck.card/column
+      as: text
+      cardinality: one
+      description: "The `key` of the column the artifact sits in"
+    order:
+      the: xyz.tonk.deck.card/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the artifact in its stack"
+
+---
+concept!: &export/compiled-19f7b5ac0542eee0
+  this: id:dashboard-rc-1/export/compiled-19f7b5ac0542eee0
+  with:
+    at:
+      the: xyz.tonk.rtc.signal/at
+      as: text
+      cardinality: one
+      description: "Publish time, milliseconds since the Unix epoch as a decimal string; also decides staleness"
+    kind:
+      the: xyz.tonk.rtc.signal/kind
+      as: text
+      cardinality: one
+      description: "offer (published by an agent) or answer (published by a browser)"
+    payload:
+      the: xyz.tonk.rtc.signal/payload
+      as: text
+      cardinality: one
+      description: "Base64 of the JSON session description, ICE candidates bundled in (non-trickle)"
+    session:
+      the: xyz.tonk.rtc.signal/session
+      as: text
+      cardinality: one
+      description: "Opaque id pairing one offer with the answer that consumes it"
+
+---
+concept!: &export/compiled-1cb9090108b8d4b2
+  this: id:dashboard-rc-1/export/compiled-1cb9090108b8d4b2
+  with:
+    key:
+      the: dom.event.detail/chat-key
+      as: text
+      cardinality: one
+      description: "Key for the new conversation, generated client-side, from the event detail"
+
+---
+concept!: &export/compiled-1e4d14edfa46ebce
+  this: id:dashboard-rc-1/export/compiled-1e4d14edfa46ebce
+  with:
+    column:
+      the: dom.event.detail/deck-card-column
+      as: text
+      cardinality: one
+      description: "The `key` of the column the artifact lands in"
+    content:
+      the: dom.event.detail/deck-card-content
+      as: text
+      cardinality: one
+      description: "Initial content JSON"
+    kind:
+      the: dom.event.detail/deck-card-kind
+      as: text
+      cardinality: one
+      description: "Artifact kind (text, table)"
+    order:
+      the: dom.event.detail/deck-card-order
+      as: text
+      cardinality: one
+      description: "Artifact order key, computed by the component"
+    time:
+      the: dom.event.detail/time
+      as: unsigned-integer
+      cardinality: one
+      description: "A monotonic integer nonce from the component"
+
+---
+concept!: &export/compiled-233cac9e9e1f2130
+  this: id:dashboard-rc-1/export/compiled-233cac9e9e1f2130
+  with:
+    key:
+      the: dom.event.detail/deck-node-delete
+      as: text
+      cardinality: one
+      description: "The `key` of the tree node to delete"
+
+---
+concept!: &export/compiled-244b5d0e5e9aee67
+  this: id:dashboard-rc-1/export/compiled-244b5d0e5e9aee67
+  with:
+    map:
+      the: xyz.tonk.map.command.inspect/map
+      as: text
+      cardinality: one
+      description: "Map command.inspect map"
+    place-id:
+      the: xyz.tonk.map.command.inspect/place-id
+      as: text
+      cardinality: one
+      description: "Map command.inspect place-id"
+    request:
+      the: xyz.tonk.map.command.inspect/request
+      as: text
+      cardinality: one
+      description: "Map command.inspect request"
+
+---
+concept!: &export/compiled-2767aace140ed1b1
+  this: id:dashboard-rc-1/export/compiled-2767aace140ed1b1
+  with:
+    map:
+      the: xyz.tonk.map.search/map
+      as: text
+      cardinality: one
+      description: "Map search map"
+    query:
+      the: xyz.tonk.map.search/query
+      as: text
+      cardinality: one
+      description: "Map search query"
+    request:
+      the: xyz.tonk.map.search/request
+      as: text
+      cardinality: one
+      description: "Map search request"
+
+---
+concept!: &export/compiled-278a8cc1b3497e3b
+  this: id:dashboard-rc-1/export/compiled-278a8cc1b3497e3b
+  with:
+    map:
+      the: xyz.tonk.map.inspect/map
+      as: text
+      cardinality: one
+      description: "Map inspect map"
+    place-id:
+      the: xyz.tonk.map.inspect/place-id
+      as: text
+      cardinality: one
+      description: "Map inspect place-id"
+    request:
+      the: xyz.tonk.map.inspect/request
+      as: text
+      cardinality: one
+      description: "Map inspect request"
+
+---
+concept!: &export/compiled-2a2b9cc7e654894f
+  this: id:dashboard-rc-1/export/compiled-2a2b9cc7e654894f
+  with:
+    at:
+      the: xyz.tonk.chat.archived/at
+      as: text
+      cardinality: one
+      description: "When it was archived, milliseconds since the Unix epoch as a 13-digit decimal string"
+    thread:
+      the: xyz.tonk.chat.archived/thread
+      as: text
+      cardinality: one
+      description: "The chat/thread key that was archived"
+
+---
+concept!: &export/compiled-2a74344851caf353
+  this: id:dashboard-rc-1/export/compiled-2a74344851caf353
+  description: "Rename the repository."
+  with:
+    name:
+      the: xyz.tonk.rename-repository/name
+      as: text
+      cardinality: one
+      description: "The new name."
+    subject:
+      the: xyz.tonk.rename-repository/subject
+      as: entity
+      cardinality: one
+      description: "The repository being renamed."
+
+---
+concept!: &export/compiled-31b54e654a016b69
+  this: id:dashboard-rc-1/export/compiled-31b54e654a016b69
+  with:
+    location:
+      the: xyz.tonk.weather.command.show/location
+      as: text
+      cardinality: one
+      description: "Weather command.show location"
+    request:
+      the: xyz.tonk.weather.command.show/request
+      as: text
+      cardinality: one
+      description: "Weather command.show request"
+    weather:
+      the: xyz.tonk.weather.command.show/weather
+      as: text
+      cardinality: one
+      description: "Weather command.show weather"
+
+---
+concept!: &export/compiled-3aa8ab113d6b64a3
+  this: id:dashboard-rc-1/export/compiled-3aa8ab113d6b64a3
+  with:
+    card:
+      the: dom.event.detail/deck-edit-card
+      as: entity
+      cardinality: one
+      description: "The edited artifact"
+    content:
+      the: dom.event.detail/deck-edit-content
+      as: text
+      cardinality: one
+      description: "The new content JSON"
+
+---
+concept!: &export/compiled-3cba42534e762a9e
+  this: id:dashboard-rc-1/export/compiled-3cba42534e762a9e
+  with:
+    column:
+      the: dom.event.detail/deck-width-column
+      as: text
+      cardinality: one
+      description: "The `key` of the column to resize"
+    width:
+      the: dom.event.detail/deck-width-value
+      as: text
+      cardinality: one
+      description: "The new width fraction, as text"
+
+---
+concept!: &export/compiled-404548462ea8f597
+  this: id:dashboard-rc-1/export/compiled-404548462ea8f597
+  with:
+    key:
+      the: xyz.tonk.deck.node/key
+      as: text
+      cardinality: one
+      description: "Opaque token other rows reference the tree node by (a deck's key is what its columns and instances point at)"
+    kind:
+      the: xyz.tonk.deck.node/kind
+      as: text
+      cardinality: one
+      description: "Tree node kind: \"folder\" or \"deck\""
+    name:
+      the: xyz.tonk.deck.node/name
+      as: text
+      cardinality: one
+      description: "The name shown in the explorer tree"
+    order:
+      the: xyz.tonk.deck.node/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the node among its siblings"
+    parent:
+      the: xyz.tonk.deck.node/parent
+      as: text
+      cardinality: one
+      description: "The `key` of the parent folder, or the sentinel \"root\" (never blank: a blank field is dropped from a command)"
+
+---
+concept!: &export/compiled-42e2a53d0897d8e7
+  this: id:dashboard-rc-1/export/compiled-42e2a53d0897d8e7
+  with:
+    key:
+      the: dom.event.detail/deck-node-move-key
+      as: text
+      cardinality: one
+      description: "The `key` of the tree node to move"
+    order:
+      the: dom.event.detail/deck-node-move-order
+      as: text
+      cardinality: one
+      description: "The node's new order key among its new siblings"
+    parent:
+      the: dom.event.detail/deck-node-move-parent
+      as: text
+      cardinality: one
+      description: "The `key` of the folder to move the node into, or \"root\""
+
+---
+concept!: &export/compiled-4bda60c6d834ae4a
+  this: id:dashboard-rc-1/export/compiled-4bda60c6d834ae4a
+  description: "Where a name points until the space points it itself."
+  with:
+    entity:
+      the: xyz.tonk.seed-name/entity
+      as: entity
+      cardinality: one
+      description: "The entity the name points at until then."
+
+---
+concept!: &export/compiled-50321f65a5b8ecd6
+  this: id:dashboard-rc-1/export/compiled-50321f65a5b8ecd6
+  with:
+    setting:
+      the: dom.event.detail/deck-setting-target
+      as: entity
+      cardinality: one
+      description: "The setting row to update"
+    value:
+      the: dom.event.detail/deck-setting-update
+      as: text
+      cardinality: one
+      description: "The setting's new value"
+
+---
+concept!: &export/compiled-5215b97455dc9009
+  this: id:dashboard-rc-1/export/compiled-5215b97455dc9009
+  with:
+    column:
+      the: dom.event.detail/deck-create-instance-column
+      as: text
+      cardinality: one
+      description: "Column key for a create-instance command"
+    content:
+      the: dom.event.detail/deck-create-instance-content
+      as: text
+      cardinality: one
+      description: "Initial content for a create-instance command"
+    deck:
+      the: dom.event.detail/deck-create-instance-deck
+      as: text
+      cardinality: one
+      description: "Owning deck key for a create-instance command"
+    kind:
+      the: dom.event.detail/deck-create-instance-kind
+      as: text
+      cardinality: one
+      description: "Artifact kind for a create-instance command"
+    order:
+      the: dom.event.detail/deck-create-instance-order
+      as: text
+      cardinality: one
+      description: "Card order for a create-instance command"
+    time:
+      the: dom.event.detail/deck-create-instance-time
+      as: unsigned-integer
+      cardinality: one
+      description: "Creation timestamp for a create-instance command"
+
+---
+concept!: &export/compiled-5468fdd7fa007381
+  this: id:dashboard-rc-1/export/compiled-5468fdd7fa007381
+  with:
+    key:
+      the: xyz.tonk.chat.thread/key
+      as: text
+      cardinality: one
+      description: "Opaque token the card's content holds and messages reference; identifies the conversation"
+
+---
+concept!: &export/compiled-56e4eace4e12145e
+  this: id:dashboard-rc-1/export/compiled-56e4eace4e12145e
+  with:
+    latitude:
+      the: xyz.tonk.map.command.fly-to/latitude
+      as: float
+      cardinality: one
+      description: "Map command.fly-to latitude"
+    longitude:
+      the: xyz.tonk.map.command.fly-to/longitude
+      as: float
+      cardinality: one
+      description: "Map command.fly-to longitude"
+    map:
+      the: xyz.tonk.map.command.fly-to/map
+      as: text
+      cardinality: one
+      description: "Map command.fly-to map"
+    request:
+      the: xyz.tonk.map.command.fly-to/request
+      as: text
+      cardinality: one
+      description: "Map command.fly-to request"
+    zoom:
+      the: xyz.tonk.map.command.fly-to/zoom
+      as: float
+      cardinality: one
+      description: "Map command.fly-to zoom"
+
+---
+concept!: &export/compiled-576f635030a5a8fd
+  this: id:dashboard-rc-1/export/compiled-576f635030a5a8fd
+  with:
+    instance:
+      the: dom.event.detail/deck-delete-instance
+      as: entity
+      cardinality: one
+      description: "The instance to delete for good (its card goes with it)"
+
+---
+concept!: &export/compiled-5ff0e987506c9fb7
+  this: id:dashboard-rc-1/export/compiled-5ff0e987506c9fb7
+  with:
+    at:
+      the: dom.event.detail/chat-arch-at
+      as: text
+      cardinality: one
+      description: "Archive time in ms since the Unix epoch, as a decimal string"
+    thread:
+      the: dom.event.detail/chat-arch-thread
+      as: text
+      cardinality: one
+      description: "Conversation to archive, from the event detail"
+
+---
+concept!: &export/compiled-64355182dcf25d0d
+  this: id:dashboard-rc-1/export/compiled-64355182dcf25d0d
+  with:
+    at:
+      the: dom.event.detail/rtc-at
+      as: text
+      cardinality: one
+      description: "Publish time, ms since the Unix epoch as a decimal string"
+    kind:
+      the: dom.event.detail/rtc-kind
+      as: text
+      cardinality: one
+      description: "Always answer when it comes from a browser"
+    payload:
+      the: dom.event.detail/rtc-payload
+      as: text
+      cardinality: one
+      description: "Base64 JSON session description, candidates bundled in"
+    session:
+      the: dom.event.detail/rtc-session
+      as: text
+      cardinality: one
+      description: "Session being answered, from the event detail"
+
+---
+concept!: &export/compiled-7152a1be382984fd
+  this: id:dashboard-rc-1/export/compiled-7152a1be382984fd
+  description: "A route — maps a path pattern to the model the SW mounts."
+  with:
+    concept:
+      the: xyz.tonk.route/concept
+      as: entity
+      cardinality: one
+      description: "The route model to render when this path matches."
+    path:
+      the: xyz.tonk.route/path
+      as: text
+      cardinality: one
+      description: "The axum/matchit path pattern."
+
+---
+concept!: &export/compiled-7436da815244eee9
+  this: id:dashboard-rc-1/export/compiled-7436da815244eee9
+  with:
+    name:
+      the: xyz.tonk.deck.setting/name
+      as: text
+      cardinality: one
+      description: "A deck setting's name (e.g. google-maps-key)"
+    value:
+      the: xyz.tonk.deck.setting/value
+      as: text
+      cardinality: one
+      description: "A deck setting's value. Settings are facts in the space: everyone with access can read them; restrict API keys accordingly"
+
+---
+concept!: &export/compiled-77d24e72c79e4642
+  this: id:dashboard-rc-1/export/compiled-77d24e72c79e4642
+  with:
+    card:
+      the: dom.event.detail/deck-delete-card
+      as: entity
+      cardinality: one
+      description: "The artifact to delete"
+
+---
+concept!: &export/compiled-783fb62a20830709
+  this: id:dashboard-rc-1/export/compiled-783fb62a20830709
+  with:
+    order:
+      the: xyz.tonk.deck.card/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the artifact in its stack"
+
+---
+concept!: &export/compiled-7929150c21711e5e
+  this: id:dashboard-rc-1/export/compiled-7929150c21711e5e
+  with:
+    column:
+      the: xyz.tonk.deck.card/column
+      as: text
+      cardinality: one
+      description: "The `key` of the column the artifact sits in"
+    content:
+      the: xyz.tonk.deck.card/content
+      as: text
+      cardinality: one
+      description: "Kind-specific payload, as a JSON document"
+    kind:
+      the: xyz.tonk.deck.card/kind
+      as: text
+      cardinality: one
+      description: "Artifact kind (text, table)"
+    order:
+      the: xyz.tonk.deck.card/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the artifact in its stack"
+
+---
+concept!: &export/compiled-7f94d10ee027353f
+  this: id:dashboard-rc-1/export/compiled-7f94d10ee027353f
+  with:
+    at:
+      the: xyz.tonk.chat.message/at
+      as: text
+      cardinality: one
+      description: "Wall-clock send time: milliseconds since the Unix epoch as a 13-digit decimal string; also orders the transcript"
+    body:
+      the: xyz.tonk.chat.message/body
+      as: text
+      cardinality: one
+      description: "The utterance text, plain text; newlines are preserved"
+    role:
+      the: xyz.tonk.chat.message/role
+      as: text
+      cardinality: one
+      description: "Who speaks: user | agent | thought (a thought is a long-form note the agent writes while thinking; the card renders it collapsed)"
+    thread:
+      the: xyz.tonk.chat.message/thread
+      as: text
+      cardinality: one
+      description: "The chat/thread key this message belongs to"
+
+---
+concept!: &export/compiled-814a4876b6388b39
+  this: id:dashboard-rc-1/export/compiled-814a4876b6388b39
+  with:
+    key:
+      the: dom.event.detail/deck-node-key
+      as: text
+      cardinality: one
+      description: "Component-minted opaque token for the tree node"
+    kind:
+      the: dom.event.detail/deck-node-kind
+      as: text
+      cardinality: one
+      description: "Tree node kind: \"folder\" or \"deck\""
+    name:
+      the: dom.event.detail/deck-node-name
+      as: text
+      cardinality: one
+      description: "Initial tree node name"
+    order:
+      the: dom.event.detail/deck-node-order
+      as: text
+      cardinality: one
+      description: "Tree node order key among its siblings, computed by the component"
+    parent:
+      the: dom.event.detail/deck-node-parent
+      as: text
+      cardinality: one
+      description: "The `key` of the parent folder, or the sentinel \"root\""
+    time:
+      the: dom.event.detail/time
+      as: unsigned-integer
+      cardinality: one
+      description: "A monotonic integer nonce from the component"
+
+---
+concept!: &export/compiled-828137482d10e25c
+  this: id:dashboard-rc-1/export/compiled-828137482d10e25c
+  with:
+    setting:
+      the: dom.event.detail/deck-setting-clear
+      as: entity
+      cardinality: one
+      description: "The setting row whose value to clear"
+
+---
+concept!: &export/compiled-85ea5725d1f2d1f2
+  this: id:dashboard-rc-1/export/compiled-85ea5725d1f2d1f2
+  with:
+    order:
+      the: xyz.tonk.deck.column/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the column on the strip"
+
+---
+concept!: &export/compiled-867f7b2bd7f9345c
+  this: id:dashboard-rc-1/export/compiled-867f7b2bd7f9345c
+  with:
+    column:
+      the: dom.event.detail/deck-delete-column
+      as: text
+      cardinality: one
+      description: "The `key` of the column to delete"
+
+---
+concept!: &export/compiled-8a11b45e0cf15740
+  this: id:dashboard-rc-1/export/compiled-8a11b45e0cf15740
+  description: "A route this library ships, unless a route already claims its path."
+  with:
+    concept:
+      the: xyz.tonk.seed-route/concept
+      as: entity
+      cardinality: one
+      description: "The route model to render at the path."
+    path:
+      the: xyz.tonk.seed-route/path
+      as: text
+      cardinality: one
+      description: "The axum/matchit path pattern."
+
+---
+concept!: &export/compiled-8bb0e492288c78cf
+  this: id:dashboard-rc-1/export/compiled-8bb0e492288c78cf
+  with:
+    name:
+      the: xyz.tonk.deck.space/name
+      as: text
+      cardinality: one
+      description: "The space name shown on its pill"
+
+---
+concept!: &export/compiled-8fa0e5e07b2c16d4
+  this: id:dashboard-rc-1/export/compiled-8fa0e5e07b2c16d4
+  with:
+    value:
+      the: xyz.tonk.deck.setting/value
+      as: text
+      cardinality: one
+      description: "A deck setting's value. Settings are facts in the space: everyone with access can read them; restrict API keys accordingly"
+
+---
+concept!: &export/compiled-924388760e6aaf1e
+  this: id:dashboard-rc-1/export/compiled-924388760e6aaf1e
+  with:
+    name:
+      the: xyz.tonk.repo/name
+      as: text
+      cardinality: one
+      description: "The repository's display name. Seeded at creation (the worker writes it into the repo's own `tonk/repository` on the content branch) and carried over sync on join, so a real repository always has one; the banner still falls back to \"Untitled\" if a read races ahead of the fact.\n"
+  maybe:
+    description:
+      the: xyz.tonk.repo/description
+      as: text
+      cardinality: one
+      description: "A short description written by the space owner."
+
+---
+concept!: &export/compiled-9416eac2d0d28726
+  this: id:dashboard-rc-1/export/compiled-9416eac2d0d28726
+  with:
+    instance:
+      the: dom.event.detail/deck-retitle-instance
+      as: entity
+      cardinality: one
+      description: "The instance to retitle"
+    title:
+      the: dom.event.detail/deck-retitle-title
+      as: text
+      cardinality: one
+      description: "The instance's new title (never blank — a blank field is dropped from a command; clearing goes through untitle-instance)"
+
+---
+concept!: &export/compiled-958eb903b6c43590
+  this: id:dashboard-rc-1/export/compiled-958eb903b6c43590
+  with:
+    content:
+      the: xyz.tonk.deck.card/content
+      as: text
+      cardinality: one
+      description: "Kind-specific payload, as a JSON document"
+
+---
+concept!: &export/compiled-a0ba562467778d56
+  this: id:dashboard-rc-1/export/compiled-a0ba562467778d56
+  with:
+    order:
+      the: xyz.tonk.deck.node/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the node among its siblings"
+
+---
+concept!: &export/compiled-ac35ddaa0ffe36e1
+  this: id:dashboard-rc-1/export/compiled-ac35ddaa0ffe36e1
+  description: "A shared repository which is the subject of a tonk/replica."
+  with:
+    name:
+      the: xyz.tonk.repo/name
+      as: text
+      cardinality: one
+      description: "The repository's display name. Seeded at creation (the worker writes it into the repo's own `tonk/repository` on the content branch) and carried over sync on join, so a real repository always has one; the banner still falls back to \"Untitled\" if a read races ahead of the fact.\n"
+  maybe:
+    description:
+      the: xyz.tonk.repo/description
+      as: text
+      cardinality: one
+      description: "A short description written by the space owner."
+
+---
+concept!: &export/compiled-ade9672f132927db
+  this: id:dashboard-rc-1/export/compiled-ade9672f132927db
+  with:
+    role:
+      the: dom.event.detail/chat-role
+      as: text
+      cardinality: one
+      description: "Speaker role for the minted message; the composer sends user"
+    say:
+      the: dom.event.detail/chat-say
+      as: text
+      cardinality: one
+      description: "The composed message text, from the event detail"
+    stamp:
+      the: dom.event.detail/chat-stamp
+      as: text
+      cardinality: one
+      description: "Send time in ms since the Unix epoch, as a decimal string; keeps repeat sends distinct"
+    thread:
+      the: dom.event.detail/chat-thread
+      as: text
+      cardinality: one
+      description: "Thread the message belongs to, from the event detail"
+
+---
+concept!: &export/compiled-af099aa52628b82d
+  this: id:dashboard-rc-1/export/compiled-af099aa52628b82d
+  with:
+    key:
+      the: dom.event.detail/deck-sp-delete
+      as: text
+      cardinality: one
+      description: "The `key` of the space to delete"
+
+---
+concept!: &export/compiled-b349b60068b51b19
+  this: id:dashboard-rc-1/export/compiled-b349b60068b51b19
+  with:
+    name:
+      the: xyz.tonk.deck.node/name
+      as: text
+      cardinality: one
+      description: "The name shown in the explorer tree"
+
+---
+concept!: &export/compiled-b8137b0b04d2b7c5
+  this: id:dashboard-rc-1/export/compiled-b8137b0b04d2b7c5
+  with:
+    location:
+      the: xyz.tonk.weather.show/location
+      as: text
+      cardinality: one
+      description: "Weather show location"
+    request:
+      the: xyz.tonk.weather.show/request
+      as: text
+      cardinality: one
+      description: "Weather show request"
+    weather:
+      the: xyz.tonk.weather.show/weather
+      as: text
+      cardinality: one
+      description: "Weather show weather"
+
+---
+concept!: &export/compiled-bb510a8d92979c3f
+  this: id:dashboard-rc-1/export/compiled-bb510a8d92979c3f
+  with:
+    name:
+      the: dom.event.current-target/value
+      as: text
+      cardinality: one
+      description: "The new name, read from the editable's value on commit."
+    subject:
+      the: dom.event.current-target.dataset/subject
+      as: entity
+      cardinality: one
+      description: "The repository's subject DID, stamped on the banner element."
+
+---
+concept!: &export/compiled-bd8c5660288af282
+  this: id:dashboard-rc-1/export/compiled-bd8c5660288af282
+  with:
+    archived:
+      the: dom.event.detail/chat-unarch
+      as: entity
+      cardinality: one
+      description: "The chat/archived entity to retract, from the event detail"
+
+---
+concept!: &export/compiled-c49de8f0a2f046b8
+  this: id:dashboard-rc-1/export/compiled-c49de8f0a2f046b8
+  with:
+    order:
+      the: xyz.tonk.deck.node/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the node among its siblings"
+    parent:
+      the: xyz.tonk.deck.node/parent
+      as: text
+      cardinality: one
+      description: "The `key` of the parent folder, or the sentinel \"root\" (never blank: a blank field is dropped from a command)"
+
+---
+concept!: &export/compiled-c7f96ac6babbece9
+  this: id:dashboard-rc-1/export/compiled-c7f96ac6babbece9
+  with:
+    agent:
+      the: xyz.tonk.agent.presence/agent
+      as: text
+      cardinality: one
+      description: "The listener's self-chosen display name"
+    beat:
+      the: xyz.tonk.agent.presence/beat
+      as: text
+      cardinality: one
+      description: "Heartbeat: when the listener last checked in, milliseconds since the Unix epoch as a 13-digit decimal string"
+    status:
+      the: xyz.tonk.agent.presence/status
+      as: text
+      cardinality: one
+      description: "Free-form status line, e.g. listening | thinking"
+    thread:
+      the: xyz.tonk.agent.presence/thread
+      as: text
+      cardinality: one
+      description: "The chat/thread key this listener is attached to"
+
+---
+concept!: &export/compiled-ca295bd64c412b6c
+  this: id:dashboard-rc-1/export/compiled-ca295bd64c412b6c
+  with:
+    map:
+      the: xyz.tonk.map.command.search/map
+      as: text
+      cardinality: one
+      description: "Map command.search map"
+    query:
+      the: xyz.tonk.map.command.search/query
+      as: text
+      cardinality: one
+      description: "Map command.search query"
+    request:
+      the: xyz.tonk.map.command.search/request
+      as: text
+      cardinality: one
+      description: "Map command.search request"
+
+---
+concept!: &export/compiled-d4e938a3d38154fe
+  this: id:dashboard-rc-1/export/compiled-d4e938a3d38154fe
+  with:
+    key:
+      the: xyz.tonk.deck.column/key
+      as: text
+      cardinality: one
+      description: "Opaque token cards reference the column by"
+    order:
+      the: xyz.tonk.deck.column/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the column on the strip"
+    width:
+      the: xyz.tonk.deck.column/width
+      as: text
+      cardinality: one
+      description: "Column width as a fraction of the viewport, as text (\"0.38\")"
+  maybe:
+    space:
+      the: xyz.tonk.deck.column/space
+      as: text
+      cardinality: one
+      description: "The `key` of the space this column belongs to; absent means the home space (\"main\")"
+
+---
+concept!: &export/compiled-d6ec92784f2e6795
+  this: id:dashboard-rc-1/export/compiled-d6ec92784f2e6795
+  with:
+    presence:
+      the: dom.event.detail/chat-unplug
+      as: entity
+      cardinality: one
+      description: "The agent/presence entity to retract, from the event detail"
+
+---
+concept!: &export/compiled-d992d3773908558b
+  this: id:dashboard-rc-1/export/compiled-d992d3773908558b
+  with:
+    title:
+      the: xyz.tonk.deck.instance/title
+      as: text
+      cardinality: one
+      description: "The instance's title, shown in its card head and in the ⌘I list; absent means \"untitled\""
+
+---
+concept!: &export/compiled-de4b9e782a0b27b6
+  this: id:dashboard-rc-1/export/compiled-de4b9e782a0b27b6
+  with:
+    order:
+      the: xyz.tonk.deck.space/order
+      as: text
+      cardinality: one
+      description: "Lexicographic key ordering the pill in the switcher"
+
+---
+concept!: &export/compiled-dea522de8e6785cf
+  this: id:dashboard-rc-1/export/compiled-dea522de8e6785cf
+  with:
+    name:
+      the: dom.event.detail/deck-setting-name
+      as: text
+      cardinality: one
+      description: "The setting's name (e.g. google-maps-key)"
+    time:
+      the: dom.event.detail/time
+      as: unsigned-integer
+      cardinality: one
+      description: "A monotonic integer nonce from the component"
+    value:
+      the: dom.event.detail/deck-setting-value
+      as: text
+      cardinality: one
+      description: "The setting's initial value (never blank — a blank field is dropped from a command)"
+
+---
+concept!: &export/compiled-e5162250367172a8
+  this: id:dashboard-rc-1/export/compiled-e5162250367172a8
+  with:
+    card:
+      the: dom.event.detail/deck-move-card
+      as: entity
+      cardinality: one
+      description: "The artifact to move"
+    column:
+      the: dom.event.detail/deck-move-column
+      as: text
+      cardinality: one
+      description: "The `key` of the destination column"
+    order:
+      the: dom.event.detail/deck-move-order
+      as: text
+      cardinality: one
+      description: "The new order key, computed by the component"
+
+---
+concept!: &export/compiled-e6afaaa85a3d11df
+  this: id:dashboard-rc-1/export/compiled-e6afaaa85a3d11df
+  with:
+    content:
+      the: dom.event.detail/vault-save-content
+      as: text
+      cardinality: one
+      description: "The new body"
+    node:
+      the: dom.event.detail/vault-save-node
+      as: entity
+      cardinality: one
+      description: "The vault file being written"
+
+---
+concept!: &export/compiled-e6b3695e286b6350
+  this: id:dashboard-rc-1/export/compiled-e6b3695e286b6350
+  with:
+    key:
+      the: dom.event.detail/deck-sp-target
+      as: text
+      cardinality: one
+      description: "The `key` of the space to rename"
+    name:
+      the: dom.event.detail/deck-sp-rename
+      as: text
+      cardinality: one
+      description: "The new space name"
+
+---
+concept!: &export/compiled-e714846c49f6d147
+  this: id:dashboard-rc-1/export/compiled-e714846c49f6d147
+  with:
+    card:
+      the: dom.event.detail/deck-close-card
+      as: entity
+      cardinality: one
+      description: "The card to close: take it off the strip, keep the instance"
+
+---
+concept!: &export/compiled-e876f2e32f7a7863
+  this: id:dashboard-rc-1/export/compiled-e876f2e32f7a7863
+  with:
+    width:
+      the: xyz.tonk.deck.column/width
+      as: text
+      cardinality: one
+      description: "Column width as a fraction of the viewport, as text (\"0.38\")"
+
+---
+concept!: &export/compiled-ed0260567591fea0
+  this: id:dashboard-rc-1/export/compiled-ed0260567591fea0
+  description: "Session-only agent invitation response, independent of ordinary sharing."
+  with:
+    account:
+      the: xyz.tonk.agent-handoff/account
+      as: entity
+      cardinality: one
+      description: "Required account for legacy handoffs; a profile placeholder for bearer invitations."
+    link:
+      the: xyz.tonk.agent-handoff/link
+      as: text
+      cardinality: one
+      description: "Scoped invitation URL when ready, otherwise empty."
+    status:
+      the: xyz.tonk.agent-handoff/status
+      as: text
+      cardinality: one
+      description: "Ready marker or a pending or failure explanation."
+
+---
+concept!: &export/compiled-ef812e70036f97a8
+  this: id:dashboard-rc-1/export/compiled-ef812e70036f97a8
+  with:
+    instance:
+      the: dom.event.detail/deck-untitle-instance
+      as: entity
+      cardinality: one
+      description: "The instance whose title to clear (back to \"untitled\")"
+
+---
+concept!: &export/compiled-f13bc54ee0a39ea4
+  this: id:dashboard-rc-1/export/compiled-f13bc54ee0a39ea4
+  with:
+    key:
+      the: dom.event.detail/deck-col-key
+      as: text
+      cardinality: one
+      description: "Component-minted opaque token for the column"
+    order:
+      the: dom.event.detail/deck-col-order
+      as: text
+      cardinality: one
+      description: "Column order key, computed by the component"
+    space:
+      the: dom.event.detail/deck-col-space
+      as: text
+      cardinality: one
+      description: "The `key` of the space the column belongs to"
+    time:
+      the: dom.event.detail/time
+      as: unsigned-integer
+      cardinality: one
+      description: "A monotonic integer nonce from the component"
+    width:
+      the: dom.event.detail/deck-col-width
+      as: text
+      cardinality: one
+      description: "Initial width fraction, as text"
+
+---
+concept!: &export/compiled-f384567ff3d20ea6
+  this: id:dashboard-rc-1/export/compiled-f384567ff3d20ea6
+  with:
+    content:
+      the: io.gozala.prose/content
+      as: text
+      cardinality: one
+      description: "The note body, as markdown"
+
+---
+concept!: &export/compiled-f768980e27d3519a
+  this: id:dashboard-rc-1/export/compiled-f768980e27d3519a
+  with:
+    latitude:
+      the: xyz.tonk.map.fly-to/latitude
+      as: float
+      cardinality: one
+      description: "Map fly-to latitude"
+    longitude:
+      the: xyz.tonk.map.fly-to/longitude
+      as: float
+      cardinality: one
+      description: "Map fly-to longitude"
+    map:
+      the: xyz.tonk.map.fly-to/map
+      as: text
+      cardinality: one
+      description: "Map fly-to map"
+    request:
+      the: xyz.tonk.map.fly-to/request
+      as: text
+      cardinality: one
+      description: "Map fly-to request"
+    zoom:
+      the: xyz.tonk.map.fly-to/zoom
+      as: float
+      cardinality: one
+      description: "Map fly-to zoom"
+
+---
+concept!: &export/compiled-f7f3c424647a2110
+  this: id:dashboard-rc-1/export/compiled-f7f3c424647a2110
+  description: "An agent invitation joined with the repository name for the copied prompt."
+  with:
+    account:
+      the: xyz.tonk.agent-invite/account
+      as: entity
+      cardinality: one
+      description: "The account required by legacy handoffs; unused by bearer invitations."
+    link:
+      the: xyz.tonk.agent-invite/link
+      as: text
+      cardinality: one
+      description: "The complete agent invitation URL."
+    name:
+      the: xyz.tonk.repo/name
+      as: text
+      cardinality: one
+      description: "The repository's display name."
+
+---
+concept!: &export/compiled-f8d34f2e14c4fa62
+  this: id:dashboard-rc-1/export/compiled-f8d34f2e14c4fa62
+  with:
+    key:
+      the: dom.event.detail/deck-sp-key
+      as: text
+      cardinality: one
+      description: "Component-minted opaque token for the space"
+    name:
+      the: dom.event.detail/deck-sp-name
+      as: text
+      cardinality: one
+      description: "Initial space name"
+    order:
+      the: dom.event.detail/deck-sp-order
+      as: text
+      cardinality: one
+      description: "Space order key, computed by the component"
+    time:
+      the: dom.event.detail/time
+      as: unsigned-integer
+      cardinality: one
+      description: "A monotonic integer nonce from the component"
+
+---
+# Reconstructed from canonical compiled rule sources, preserving polarity and bindings.
+
+# Original rule:2DvKA6YPSsfEZPYGm9aXqt4uNgp72QgFr7qzVmv4iv6c
+rule!:
+  assert!: export/compiled-7152a1be382984fd
+  when:
+    - assert: export/compiled-8a11b45e0cf15740
+      where: { concept: ?concept, path: ?path, this: ?this }
+  unless:
+    - assert: export/compiled-7152a1be382984fd
+      where: { path: ?path }
+
+---
+# Original rule:2PcMR4aKp39bsvqBWC39FhXw9kMdSxkHKinUQJYAysDx
+rule!:
+  assert!: export/compiled-278a8cc1b3497e3b
+  when:
+    - assert: export/compiled-244b5d0e5e9aee67
+      where: { map: ?map, place-id: ?place-id, request: ?request, this: ?this }
+
+---
+# Original rule:3L7NRJjVs4v39QdkXaoYav2UKFwWPUxvGdXir8vQQuMG
+rule!:
+  assert!: export/compiled-ac35ddaa0ffe36e1
+  when:
+    - assert: export/compiled-2a74344851caf353
+      where: { name: ?name, subject: ?this }
+
+---
+# Original rule:5Dmgta3frXheuW72dd4TkfgvmATfwsrbKpJHbVbWvbde
+rule!:
+  retract!: export/compiled-c7f96ac6babbece9
+  when:
+    - assert: export/compiled-d6ec92784f2e6795
+      where: { presence: ?this }
+    - assert: export/compiled-c7f96ac6babbece9
+      where: { agent: ?agent, beat: ?beat, status: ?status, this: ?this, thread: ?thread }
+
+---
+# Original rule:6BfLZb54QhyWKubUpp9itzTxgK1eS5MfS63awFF7efDu
+rule!:
+  assert!: export/compiled-19f7b5ac0542eee0
+  when:
+    - assert: export/compiled-64355182dcf25d0d
+      where: { at: ?at, kind: ?kind, payload: ?payload, session: ?session, this: ?this }
+
+---
+# Original rule:6iyKJN7omHqMAUECxtDTjpjNrLuzDzGiMXyyXGfxuuCs
+rule!:
+  assert!: export/compiled-7929150c21711e5e
+  when:
+    - assert: export/compiled-1e4d14edfa46ebce
+      where: { column: ?column, content: ?content, kind: ?kind, order: ?order, this: ?this, time: ?time }
+
+---
+# Original rule:6veVPJ1VPBfEcT3YoQLuMFLXumabp4afjGsZqFTvXs7x
+rule!:
+  retract!: export/compiled-de4b9e782a0b27b6
+  when:
+    - assert: export/compiled-af099aa52628b82d
+      where: { key: ?key }
+    - assert: export/compiled-111ef2059d083356
+      where: { key: ?key, name: ?name, order: ?order, this: ?this }
+
+---
+# Original rule:8NANRSP1yGfCLw9MZuoyKGrG9UZwkADE7iii6CsWCiPb
+rule!:
+  retract!: export/compiled-85ea5725d1f2d1f2
+  when:
+    - assert: export/compiled-867f7b2bd7f9345c
+      where: { column: ?key }
+    - assert: export/compiled-d4e938a3d38154fe
+      where: { key: ?key, order: ?order, space: ?space, this: ?this, width: ?width }
+
+---
+# Original rule:8wmGfhaWJc2g6VhTfiayLkWQ927qK2p1RKuRLG7wfpqk
+rule!:
+  assert!: export/compiled-7f94d10ee027353f
+  when:
+    - assert: export/compiled-ade9672f132927db
+      where: { role: ?role, say: ?body, stamp: ?at, this: ?this, thread: ?thread }
+
+---
+# Original rule:9TkJzMgYwUK68ggrcFzxudq53kGzwM2U6HXWHVXDC5Co
+rule!:
+  assert!: export/compiled-197eb26bcd17b5b0
+  when:
+    - assert: export/compiled-e5162250367172a8
+      where: { card: ?this, column: ?column, order: ?order }
+
+---
+# Original rule:9mZYceTKcenP3FmP88nknCauAo83Vvfeuzdf6vzjn6dD
+rule!:
+  assert!: export/compiled-5468fdd7fa007381
+  when:
+    - assert: export/compiled-1cb9090108b8d4b2
+      where: { key: ?key, this: ?this }
+
+---
+# Original rule:9wGhcfC2uVJ5AiJYJwy4uxRFFpJBfa1hFprAqfsYPbsr
+rule!:
+  assert!: export/compiled-f384567ff3d20ea6
+  when:
+    - assert: export/compiled-e6afaaa85a3d11df
+      where: { content: ?content, node: ?this }
+
+---
+# Original rule:9wx1UdoPNYPcAHXrQR66iFBG2KmNPqTVknfC4JVXnEHU
+rule!:
+  assert!: export/compiled-e876f2e32f7a7863
+  when:
+    - assert: export/compiled-3cba42534e762a9e
+      where: { column: ?key, width: ?width }
+    - assert: export/compiled-d4e938a3d38154fe
+      where: { key: ?key, order: ?order, space: ?space, this: ?this, width: ?old }
+
+---
+# Original rule:A2qENwxn3E7aiFLmnm79y8rAnZtEv2qyyBfMaczJFA9c
+rule!:
+  assert!: export/compiled-0910b5df7de6d2de
+  when:
+    - assert: export/compiled-5215b97455dc9009
+      where: { column: ?column, content: ?content, deck: ?deck, kind: ?kind, order: ?order, this: ?this, time: ?born }
+
+---
+# Original rule:AmtHzjJb2VCsBWsn4AJ1rvrSsLbE9NAvuFeiqp65QTb6
+rule!:
+  retract!: export/compiled-2a2b9cc7e654894f
+  when:
+    - assert: export/compiled-bd8c5660288af282
+      where: { archived: ?this }
+    - assert: export/compiled-2a2b9cc7e654894f
+      where: { at: ?at, this: ?this, thread: ?thread }
+
+---
+# Original rule:B4JTjqL37sitsNpoNzda31CVkwQMqtEy93WKHK39eWaN
+rule!:
+  assert!: export/compiled-8fa0e5e07b2c16d4
+  when:
+    - assert: export/compiled-50321f65a5b8ecd6
+      where: { setting: ?this, value: ?value }
+
+---
+# Original rule:BPpso2Se6GB3wcjeSYQyHVpFfiY7WwoWp2aUR9mdcZot
+rule!:
+  assert!: export/compiled-8bb0e492288c78cf
+  when:
+    - assert: export/compiled-e6b3695e286b6350
+      where: { key: ?key, name: ?name }
+    - assert: export/compiled-111ef2059d083356
+      where: { key: ?key, name: ?old, order: ?order, this: ?this }
+
+---
+# Original rule:Bkkh4E442SRAjTjPKD44WsnhSxLyzBSGWGmEsKryxUx
+rule!:
+  assert!: export/compiled-b8137b0b04d2b7c5
+  when:
+    - assert: export/compiled-31b54e654a016b69
+      where: { location: ?location, request: ?request, this: ?this, weather: ?weather }
+
+---
+# Original rule:Bvo4mxL21oDTRTFz3ep61iwZiWi5V33DwUkkR38Ce6cE
+rule!:
+  assert!: export/compiled-958eb903b6c43590
+  when:
+    - assert: export/compiled-3aa8ab113d6b64a3
+      where: { card: ?this, content: ?content }
+
+---
+# Original rule:ByniJmLA9xEduDQbVYTAZnZtpvcxpEdgMFYcLFmDbRhv
+rule!:
+  assert!: export/compiled-f768980e27d3519a
+  when:
+    - assert: export/compiled-56e4eace4e12145e
+      where: { latitude: ?latitude, longitude: ?longitude, map: ?map, request: ?request, this: ?this, zoom: ?zoom }
+
+---
+# Original rule:CABFkRMLC6UAMHJJFYcV7ULV9woap1jNgiB3ePz5yBwf
+rule!:
+  assert!: export/compiled-d992d3773908558b
+  when:
+    - assert: export/compiled-9416eac2d0d28726
+      where: { instance: ?this, title: ?title }
+
+---
+# Original rule:CCrtQbxywVPVrmEagTAXQBjPVvcbhQijy4yJgrXZ6aTf
+rule!:
+  assert!: export/compiled-d4e938a3d38154fe
+  when:
+    - assert: export/compiled-f13bc54ee0a39ea4
+      where: { key: ?key, order: ?order, space: ?space, this: ?this, time: ?time, width: ?width }
+
+---
+# Original rule:CiM4LACHZx6jsznsSFPFNRqGiC1tsGj6Uj59LThtwjuZ
+rule!:
+  retract!: export/compiled-8fa0e5e07b2c16d4
+  when:
+    - assert: export/compiled-828137482d10e25c
+      where: { setting: ?this }
+    - assert: export/compiled-8fa0e5e07b2c16d4
+      where: { this: ?this, value: ?value }
+
+---
+# Original rule:CigGqSdpsBTHEBQzhMQMudsFSHCoJVKMMB7AjCfZ4GHU
+rule!:
+  assert!: export/compiled-b349b60068b51b19
+  when:
+    - assert: export/compiled-18ec41b34426eb43
+      where: { key: ?key, name: ?name }
+    - assert: export/compiled-404548462ea8f597
+      where: { key: ?key, kind: ?kind, name: ?old, order: ?order, parent: ?parent, this: ?this }
+
+---
+# Original rule:CmLcCUXgybMTfCan5nLXVY3BqwtG5nUzNrXxGnLSf16k
+rule!:
+  assert!: export/compiled-7929150c21711e5e
+  when:
+    - assert: export/compiled-5215b97455dc9009
+      where: { column: ?column, content: ?content, deck: ?deck, kind: ?kind, order: ?order, this: ?this, time: ?time }
+
+---
+# Original rule:CtEdTpdaBLvfeZbj9rKskJUGqHjwXh65DpRebVd9PU7t
+rule!:
+  assert!: export/compiled-924388760e6aaf1e
+  when:
+    - assert: export/compiled-bb510a8d92979c3f
+      where: { name: ?name, subject: ?this }
+
+---
+# Original rule:CyKcngGC6JwN1vuxBgfkjfhBey2VDt2tk5CgsX5anwzj
+rule!:
+  retract!: export/compiled-783fb62a20830709
+  when:
+    - assert: export/compiled-e714846c49f6d147
+      where: { card: ?this }
+    - assert: export/compiled-783fb62a20830709
+      where: { order: ?order, this: ?this }
+
+---
+# Original rule:DajSsUYvGYzfm5D7MM3yGDDgBsnobYtnpqHPpj3HmqHc
+rule!:
+  assert!: export/compiled-c49de8f0a2f046b8
+  when:
+    - assert: export/compiled-42e2a53d0897d8e7
+      where: { key: ?key, order: ?order, parent: ?parent }
+    - assert: export/compiled-404548462ea8f597
+      where: { key: ?key, kind: ?kind, name: ?name, order: ?oldo, parent: ?oldp, this: ?this }
+
+---
+# Original rule:Dhnyggc1Zytw9XMmNUGXzWSxtV23E5pbP9JCtV9pBn1Q
+rule!:
+  assert!: export/compiled-2767aace140ed1b1
+  when:
+    - assert: export/compiled-ca295bd64c412b6c
+      where: { map: ?map, query: ?query, request: ?request, this: ?this }
+
+---
+# Original rule:Dn5Zourhsp8WWNFiwnbUo7RrKRwSVN2HefhKxnCYBLAw
+rule!:
+  assert!: export/compiled-111ef2059d083356
+  when:
+    - assert: export/compiled-f8d34f2e14c4fa62
+      where: { key: ?key, name: ?name, order: ?order, this: ?this, time: ?time }
+
+---
+# Original rule:E98XjwKXDN8n6xnyNM9Vnb8qyktGCc4fb4X41VCWre7G
+rule!:
+  assert: export/compiled-f7f3c424647a2110
+  when:
+    - assert: export/compiled-ac35ddaa0ffe36e1
+      where: { name: ?name, this: ?this }
+    - assert: export/compiled-ed0260567591fea0
+      where: { account: ?account, link: ?link, status: "ready", this: ?this }
+
+---
+# Original rule:EvA9S988Cap46bnUsfCNZJgLR6Z1QqfAhxWE1yAf3uV4
+rule!:
+  assert!: export/compiled-5468fdd7fa007381
+  when:
+    - assert: export/compiled-5215b97455dc9009
+      where: { column: ?column, content: ?key, deck: ?deck, kind: "agent", order: ?order, this: ?this, time: ?time }
+
+---
+# Original rule:F4wELk2hQ7dXVg4MPmY7zBEHFMyRuKxCaGznUgHaURfw
+rule!:
+  retract!: export/compiled-a0ba562467778d56
+  when:
+    - assert: export/compiled-233cac9e9e1f2130
+      where: { key: ?key }
+    - assert: export/compiled-404548462ea8f597
+      where: { key: ?key, kind: ?kind, name: ?name, order: ?order, parent: ?parent, this: ?this }
+
+---
+# Original rule:GcRQEwcpPbzbxGctMy1QJMzNEp8KM3bHdxCxtS1HNZju
+rule!:
+  assert!: export/compiled-0f06f7da80f66d92
+  when:
+    - assert: export/compiled-4bda60c6d834ae4a
+      where: { entity: ?entity, this: ?this }
+  unless:
+    - assert: export/compiled-0f06f7da80f66d92
+      where: { this: ?this }
+
+---
+# Original rule:H1S3NH1vRBYp2veyshKUaRWYKPtW4xFtaBbzH6BSkHwR
+rule!:
+  assert!: export/compiled-2a2b9cc7e654894f
+  when:
+    - assert: export/compiled-5ff0e987506c9fb7
+      where: { at: ?at, this: ?this, thread: ?thread }
+
+---
+# Original rule:H4tNWVmSFX1vHq1cocp9hoTwHWejnHW7hT8BhYWNLWvq
+rule!:
+  assert!: export/compiled-404548462ea8f597
+  when:
+    - assert: export/compiled-814a4876b6388b39
+      where: { key: ?key, kind: ?kind, name: ?name, order: ?order, parent: ?parent, this: ?this, time: ?time }
+
+---
+# Original rule:HZGBkEfZjm5gURztzXJEn6Ev7pTEiv8FcrYm6RPrw7AR
+rule!:
+  assert!: export/compiled-5468fdd7fa007381
+  when:
+    - assert: export/compiled-1e4d14edfa46ebce
+      where: { column: ?column, content: ?key, kind: "agent", order: ?order, this: ?this, time: ?time }
+
+---
+# Original rule:HuUtac8xzyvzXRCTwd11xRGAA6JZu2M8hPaUBAJKYK3A
+rule!:
+  retract!: export/compiled-d992d3773908558b
+  when:
+    - assert: export/compiled-ef812e70036f97a8
+      where: { instance: ?this }
+    - assert: export/compiled-d992d3773908558b
+      where: { this: ?this, title: ?title }
+
+---
+# Original rule:J71rT7f7c8kqwTovGXmSyVxNDyCyS5CN1Cae5EzsxtPj
+rule!:
+  retract!: export/compiled-783fb62a20830709
+  when:
+    - assert: export/compiled-77d24e72c79e4642
+      where: { card: ?this }
+    - assert: export/compiled-783fb62a20830709
+      where: { order: ?order, this: ?this }
+
+---
+# Original rule:i9SPdd7DswYFYCq5p2Pb5LWgSjULRVWmZtTkhhzjbR8
+rule!:
+  retract!: export/compiled-0d9647f9242de4b7
+  when:
+    - assert: export/compiled-576f635030a5a8fd
+      where: { instance: ?this }
+    - assert: export/compiled-0d9647f9242de4b7
+      where: { kind: ?kind, this: ?this }
+
+---
+# Original rule:zFGcZyZopABPym7pQpAWozVoX9Th7D9rsQUfJL4Chjn
+rule!:
+  assert!: export/compiled-7436da815244eee9
+  when:
+    - assert: export/compiled-dea522de8e6785cf
+      where: { name: ?name, this: ?this, time: ?time, value: ?value }
