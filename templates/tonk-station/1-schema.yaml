@@ -122,7 +122,7 @@ concept!:
       the: dom.event.detail/deck-card-content
       as: text
       cardinality: one
-      description: "Initial content JSON"
+      description: "Initial content as JSON text. kind text: {\"markdown\": \"...\"}. kind table: {\"content\": \"<CSV>\"}."
     deck:
       the: dom.event.detail/deck-card-deck
       as: text
@@ -132,7 +132,7 @@ concept!:
       the: dom.event.detail/deck-card-kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
     order:
       the: dom.event.detail/deck-card-order
       as: text
@@ -690,7 +690,7 @@ concept!: &deck/instance-kind
       the: xyz.tonk.deck.card/kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
 
 ---
 db.concept.with!:
@@ -998,7 +998,7 @@ concept!: &deck/card-content
       the: xyz.tonk.deck.card/content
       as: text
       cardinality: one
-      description: "Kind-specific payload, as a JSON document"
+      description: "Kind-specific payload as JSON text, never raw text or bare markdown. kind text (a markdown note): {\"markdown\": \"# Heading\\n\\nBody\"}. kind table: {\"content\": \"<CSV>\"}."
 
 ---
 concept!: &deck/delete-card
@@ -1338,12 +1338,12 @@ concept!: &deck/create-card
       the: dom.event.detail/deck-card-content
       as: text
       cardinality: one
-      description: "Initial content JSON"
+      description: "Initial content as JSON text. kind text: {\"markdown\": \"...\"}. kind table: {\"content\": \"<CSV>\"}."
     kind:
       the: dom.event.detail/deck-card-kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
     order:
       the: dom.event.detail/deck-card-order
       as: text
@@ -1824,12 +1824,12 @@ concept!: &deck/card
       the: xyz.tonk.deck.card/content
       as: text
       cardinality: one
-      description: "Kind-specific payload, as a JSON document"
+      description: "Kind-specific payload as JSON text, never raw text or bare markdown. kind text (a markdown note): {\"markdown\": \"# Heading\\n\\nBody\"}. kind table: {\"content\": \"<CSV>\"}."
     kind:
       the: xyz.tonk.deck.card/kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
     order:
       the: xyz.tonk.deck.card/order
       as: text
@@ -1876,7 +1876,7 @@ concept!: &deck/instance
       the: xyz.tonk.deck.card/content
       as: text
       cardinality: one
-      description: "Kind-specific payload, as a JSON document"
+      description: "Kind-specific payload as JSON text, never raw text or bare markdown. kind text (a markdown note): {\"markdown\": \"# Heading\\n\\nBody\"}. kind table: {\"content\": \"<CSV>\"}."
     deck:
       the: xyz.tonk.deck.instance/deck
       as: text
@@ -1886,7 +1886,7 @@ concept!: &deck/instance
       the: xyz.tonk.deck.card/kind
       as: text
       cardinality: one
-      description: "Artifact kind (text, table)"
+      description: "Artifact kind: text (a markdown note, content {\"markdown\": \"...\"}) or table (content {\"content\": \"<CSV>\"})"
 
 ---
 concept!: &deck/instance-title
