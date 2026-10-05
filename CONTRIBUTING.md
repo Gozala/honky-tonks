@@ -48,6 +48,8 @@ List all source files in evaluation order. Mark optional data explicitly. Requir
 
 Use PNG, JPEG, WebP, or passive, self-contained SVG images. Files must be inside the template folder, non-empty, under 8 MB, and not symlinks. Only the listed files, images, and manifest are published. Include all assets the app needs and explain external dependencies. Extra detail images are supported by adding more entries to `images`.
 
+**Do not declare the same name twice, in one file or across files.** Make a copy in Tonk's Discover tab joins all required files into one document, placed after Tonk's standard library, and refuses the copy if any name is declared more than once (`name "x" declared twice — anchors and variables must be unique within a document`). An anchor (`concept!: &x`) and a `name!:` or `db.name!:` statement for `id:x` are both declarations, so keep only one of them. Do not repeat names the standard library already declares, such as `component`, `portal`, `route` or `tonk/agents`, and do not declare `space-home` or `id:tonk/space`: Make a copy adds those from `entrypoint`. Exports of a live space usually contain such duplicates, so remove them before you submit.
+
 Use names and attribute namespaces that will not collide with other templates. Describe effects on existing data, including repeated installation. Use a standard license identifier and include a license file in the template folder if its terms differ from the repository's MIT license. Contributors must have the right to distribute their code and images.
 
 ## Check and submit

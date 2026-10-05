@@ -1993,14 +1993,14 @@ xyz.tonk.view!:
 # ---- 07-view-bindings.yaml ----
 # Event declarations are colocated so Tonk rebuilds identical compiled bindings.
 
-event!: &on/invite
+event!:
   this: did:key:z6MkEukVJCBBhDynECmTu17B5Yx6cjuWsyfHLdGoLyikkKzo
   type: "mount"
   where:
     time: ".timeStamp"
 
 ---
-event!: &on/new-agent-invite
+event!:
   this: did:key:z6MkAYs579qMGcL4HT2FAx1xHeNecqe3ugnPgq65kVv2dq6o
   type: "click"
   where:
@@ -2008,7 +2008,7 @@ event!: &on/new-agent-invite
     time: ".timeStamp"
 
 ---
-event!: &on/repository-rename
+event!:
   this: did:key:z6MkAFpcuvFLCRWZhZpt2fLpS82vLzp16YRUjLLfedbyft9C
   type: "change"
   where:
