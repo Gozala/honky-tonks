@@ -192,7 +192,7 @@ tonk/agents!:
 
     - One family: 16-unit (or 20-unit) line drawings, 1.5 stroke, round caps and joins, drawn in `currentColor`, like SF Symbols. Never use emoji or text glyphs as icons in UI chrome.
     - One metaphor per object, used everywhere: a deck is a stack of cards, a folder is a folder, text is a page, a spreadsheet is a cell grid, a table is rows under a header, a terminal is a prompt in a window.
-    - A new artifact kind must add its icon to `KIND_ICON` in the deck canvas component (`id:deck/component/canvas`); otherwise it falls back to the plain document icon.
+    - A new artifact kind must add its icon to `KIND_ICON` in the deck canvas element (`<deck-canvas>`, the `element!: &deck-canvas` in 5-components.yaml); otherwise it falls back to the plain document icon.
     - Colour icons are for content only, never for chrome. An example is a weather condition: yellow sun, white or grey cloud, blue rain.
 
     ### Content, copy and states

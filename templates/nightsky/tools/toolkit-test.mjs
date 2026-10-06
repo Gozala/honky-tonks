@@ -16,9 +16,9 @@ const run = (args, { env = {}, fail = false } = {}) => {
 };
 try {
   const core = fs.readFileSync(path.join(root, 'core.yaml'), 'utf8');
-  const block = core.split(/(?=^[a-z][a-z0-9./+!-]*!:\s*)/m).find(text => text.startsWith('component!: &nightsky-kit\n'));
+  const block = core.split(/(?=^[a-z][a-z0-9./+!-]*!:\s*)/m).find(text => text.startsWith('element!: &nightsky-kit\n'));
   assert.ok(block);
-  const kit = block.split('  module: |\n')[1].split('\n').map(line => line.startsWith('    ') ? line.slice(4) : line).join('\n').trimEnd() + '\n';
+  const kit = block.split('    define: |\n')[1].split('\n').map(line => line.startsWith('      ') ? line.slice(6) : line).join('\n').trimEnd() + '\n';
   const original = path.join(temp, 'kit.js'), rebuilt = path.join(temp, 'kit-rebuilt.js');
   fs.writeFileSync(original, kit);
   run(['tools/examples/build-audio-modules.mjs', original, rebuilt]);
@@ -30,34 +30,39 @@ try {
   console.log('PASS exact public kit rebuild, namespacing and source fingerprint');
 
   const fake = path.join(temp, 'fake-tonk'), stateFile = path.join(temp, 'state.json');
-  fs.writeFileSync(fake, `#!/usr/bin/env node\nconst fs=require('node:fs');const args=process.argv.slice(2);const state=JSON.parse(fs.readFileSync(process.env.NIGHTSKY_TEST_STATE,'utf8'));if(args.includes('query'))process.stdout.write(JSON.stringify(state.components));else if(args.includes('eval')&&args.includes('--dry-run'))process.stdout.write(JSON.stringify({matches_before:[{label:'name',results:state.names.map(row=>({this:row.this,fields:{entity:row.entity}}))}],commits:{claims:0,entities:{}}}));else process.exit(88);\n`, { mode: 0o700 });
+  fs.writeFileSync(fake, `#!/usr/bin/env node\nconst fs=require('node:fs');const args=process.argv.slice(2);const state=JSON.parse(fs.readFileSync(process.env.NIGHTSKY_TEST_STATE,'utf8'));const group=(label,rows)=>({label,results:rows.map(({this:id,...fields})=>({this:id,fields}))});if(args.includes('element')&&args.includes('--json'))process.stdout.write(JSON.stringify({schemaVersion:'tonk.element-ls.v1',rows:state.elements.map(row=>({tag:state.names.find(name=>name.entity===row.this)?.this.slice(3)??null,entity:row.this,methods:row.methods||['define']}))}));else if(args.includes('eval')&&args.includes('--dry-run'))process.stdout.write(JSON.stringify({matches_before:[group('name',state.names),group('xyz.tonk.element.method',state.elements.map(row=>({this:row.this,define:row.define}))),group('xyz.tonk.element',state.elements.map(row=>({this:row.this,description:row.description})))],commits:{claims:0,entities:{}}}));else process.exit(88);\n`, { mode: 0o700 });
   const env = { TONK_BIN: fake, NIGHTSKY_TEST_STATE: stateFile };
-  const name = 'nightsky-test-visual', entity = 'did:key:zTestComponent';
-  const module = `customElements.define('${name}', class extends HTMLElement {});\n`;
-  const state = { names: [{ this: 'id:' + name, entity }], components: [{ this: entity, module }] };
+  const name = 'nightsky-test-visual', entity = 'did:key:zTestElement', description = 'A test visual';
+  const define = `// Test visual.\n() => class NightskyTestVisual extends HTMLElement {}\n`;
+  const state = { names: [{ this: 'id:' + name, entity }], elements: [{ this: entity, define, description }, { this: 'did:key:zUnnamed', define: '() => class extends HTMLElement {}\n', description: 'Superseded' }] };
   const writeState = () => fs.writeFileSync(stateFile, JSON.stringify(state));
   writeState();
   const prefix = path.join(temp, 'visual'), snapshot = prefix + '.snapshot.json';
-  const exportArgs = ['tools/component.mjs', 'export', '--space', 'test-space', '--name', name, '--out', prefix];
+  const exportArgs = ['tools/element.mjs', 'export', '--space', 'test-space', '--name', name, '--out', prefix];
   run(exportArgs, { env });
-  assert.equal(fs.readFileSync(prefix + '.js', 'utf8'), module);
+  assert.equal(fs.readFileSync(prefix + '.js', 'utf8'), define);
   run(exportArgs, { env, fail: true });
   const plan = path.join(temp, 'change.notation');
-  const planArgs = ['tools/component.mjs', 'plan', '--space', 'test-space', '--snapshot', snapshot, '--source', prefix + '.js', '--out', plan];
+  const planArgs = ['tools/element.mjs', 'plan', '--space', 'test-space', '--snapshot', snapshot, '--source', prefix + '.js', '--out', plan];
   run(planArgs, { env, fail: true }); // unchanged
-  fs.writeFileSync(prefix + '.js', module + '// Changed visual.\n');
+  fs.writeFileSync(prefix + '.js', define.replace('() =>', `() => customElements.define('${name}', class extends HTMLElement {}) ||`));
+  run(planArgs, { env, fail: true }); // registers the tag itself
+  const changed = define + '// Changed visual.\n';
+  fs.writeFileSync(prefix + '.js', changed);
   state.names[0].entity = 'did:key:zOther'; writeState();
   run(planArgs, { env, fail: true });
-  state.names[0].entity = entity; state.components[0].module = module + '// Other editor.\n'; writeState();
+  state.names[0].entity = entity; state.elements[0].define = define + '// Other editor.\n'; writeState();
   run(planArgs, { env, fail: true });
-  state.components[0].module = module; writeState();
+  state.elements[0].define = define; state.elements[0].methods = ['connected', 'define']; writeState();
+  run(planArgs, { env, fail: true }); // other methods would be dropped
+  delete state.elements[0].methods; writeState();
   run(planArgs, { env });
   const text = fs.readFileSync(plan, 'utf8');
   assert.ok(text.includes(`this: id:${name}\n  entity: ${entity}`));
-  assert.ok(text.includes('module: ' + JSON.stringify(module)));
-  assert.ok(text.includes(`component!: &${name}`));
-  assert.ok(text.endsWith('component!:\n  this: ?previous\n  module: _\n'));
-  assert.ok(!text.includes('space:home'));
+  assert.ok(text.includes('xyz.tonk.element.method:\n  this: ?previous\n  define: ' + JSON.stringify(define) + '\n'));
+  assert.ok(text.includes(`element!: &${name}\n  description: ?description\n`));
+  assert.ok(text.endsWith('  method:\n    define: ' + JSON.stringify(changed) + '\n'));
+  assert.ok(!text.includes('space:home') && !text.includes('_\n'));
   console.log('PASS export preservation and unchanged/stale-alias/stale-source plan rejection');
 
   const wav = Buffer.alloc(44 + 16000 * 2);

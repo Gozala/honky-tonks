@@ -419,17 +419,6 @@ concept!: &deck/card-order
       description: "Lexicographic key ordering the artifact in its stack"
 
 ---
-concept!:
-  this: concept:6QkKpBFbGHAmdVgu5VixUEAKcDXqi1RCHbRbSFsRTNmy
-  description: "A JS module defining web components for the branch's views"
-  with:
-    module:
-      the: xyz.tonk.component/module
-      as: text
-      cardinality: one
-      description: "JS module source. Runs once per realm; guard definitions with\n`customElements.get(name) ||` since a name can't be redefined\n(replacing a component takes effect on the next page load).\n"
-
----
 concept!: &deck/delete-instance
   this: concept:6zRB9utwz8BSdX38Y3nvMumTqaGjZqAwWTNVv8hYNrgS
   description: "Delete an instance for good."

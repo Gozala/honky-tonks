@@ -28,7 +28,7 @@ The Sites starter uses Vinext/React. Build-time scripts validate ordinary YAML m
 
 ## Add a template
 
-Copy a folder under `templates/`, edit its manifest, add application YAML and images, and open a pull request. No application code changes are needed. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Copy a folder under `templates/`, edit its manifest, add application YAML and images, and open a pull request. No application code changes are needed. Custom elements in a template are declared with Tonk's `element!` (the older `component` concept no longer exists). See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Included templates live under `templates/`. Compatibility is stated in each manifest. Null contact fields fall back to this project's issue tracker.
 

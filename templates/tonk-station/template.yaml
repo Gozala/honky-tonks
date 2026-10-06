@@ -38,7 +38,7 @@ files:
   - file: 4-views.yaml
     description: Views, view bindings, routes, custom elements and DOM events for the workspace shell and the deck.
   - file: 5-components.yaml
-    description: Deck, sidebar, artifact kinds, chat, terminal and Agent tasks components.
+    description: Deck, sidebar, artifact kinds, chat, terminal and Agent tasks custom elements.
   - file: 6-apps.yaml
     description: Sandboxed portal apps for spreadsheets, tables, maps, notes, terminals and weather.
   - file: 7-agents.yaml
@@ -52,4 +52,4 @@ notes: |
   Agent tasks stores requests, controls and history as facts. It does not start an agent: a separately configured worker must watch the queue and execute tasks, as described in AGENTS.md.
   External services: weather uses Open-Meteo and OpenStreetMap Nominatim without a key. Maps use Google Maps and Places with an API key you add in Settings. Mermaid diagrams in notes load from jsDelivr. Everything else, including fonts, is embedded.
   Location privacy: the map's locate button first asks the browser for the device location. If that is unavailable or denied, it requests an approximate location from ipwho.is, a third-party IP geolocation service, which receives the viewer's IP address. This happens only after a click on the locate button.
-  6-apps.yaml is about 2.6 MB and 5-components.yaml about 1.7 MB because each app and component bundles its own code.
+  6-apps.yaml is about 2.6 MB and 5-components.yaml about 1.7 MB because each app and custom element bundles its own code.

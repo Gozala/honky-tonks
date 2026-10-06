@@ -52,7 +52,7 @@ Cloudflare code deployments and transport failures can close sockets. The existi
 
 Limits: 256 concurrent sockets, 32 per IP, 64 rooms, 32 peers per room; 32KiB inbound JSON; 64KiB outbound roster; 120-message burst/60 per second per sender; separate bounded signalling and membership-control byte budgets. Workers does not expose a guaranteed Node-style `bufferedAmount`: the byte budget is a traffic bound, not proof of a measured client receive queue. Binary/deep arbitrary signalling payloads are rejected. Duplicate peer IDs never evict an incumbent. Failed membership delivery closes the affected recipient so it must rejoin.
 
-Allowed origins default to `https://tonk.network` and literal `null` (Tonk's opaque component iframe); missing Origin is rejected. Origin is not authentication. `/health` is generic unauthenticated process liveness only. Observability is disabled because invocation logs can include query capabilities; don't use raw request logging or `wrangler tail` with real private URLs.
+Allowed origins default to `https://tonk.network` and literal `null` (Tonk's opaque-origin guest iframe, where views and their custom elements run); missing Origin is rejected. Origin is not authentication. `/health` is generic unauthenticated process liveness only. Observability is disabled because invocation logs can include query capabilities; don't use raw request logging or `wrangler tail` with real private URLs.
 
 ## Recorded local acceptance
 

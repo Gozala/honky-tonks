@@ -321,7 +321,7 @@ xyz.tonk.portal!:
       }
       else {
         const refresh = () => frames().forEach(configure);
-        // The host component can load after a guest's initial handshake.
+        // The host element can load after a guest's initial handshake.
         refresh(); window.addEventListener('resize', refresh); window.addEventListener('deck-focus-change', refresh);
         let queued = false;
         new MutationObserver(() => {
@@ -1243,7 +1243,7 @@ xyz.tonk.portal!:
       }
       else {
         const refresh = () => frames().forEach(configure);
-        // The host component can load after a guest's initial handshake.
+        // The host element can load after a guest's initial handshake.
         refresh(); window.addEventListener('resize', refresh); window.addEventListener('deck-focus-change', refresh);
         let queued = false;
         new MutationObserver(() => {
@@ -2732,7 +2732,7 @@ xyz.tonk.portal!:
       }
       else {
         const refresh = () => frames().forEach(configure);
-        // The host component can load after a guest's initial handshake.
+        // The host element can load after a guest's initial handshake.
         refresh(); window.addEventListener('resize', refresh); window.addEventListener('deck-focus-change', refresh);
         let queued = false;
         new MutationObserver(() => {
@@ -4937,7 +4937,7 @@ xyz.tonk.portal!:
       }
       else {
         const refresh = () => frames().forEach(configure);
-        // The host component can load after a guest's initial handshake.
+        // The host element can load after a guest's initial handshake.
         refresh(); window.addEventListener('resize', refresh); window.addEventListener('deck-focus-change', refresh);
         let queued = false;
         new MutationObserver(() => {
@@ -5191,7 +5191,7 @@ xyz.tonk.portal!:
       }
       else {
         const refresh = () => frames().forEach(configure);
-        // The host component can load after a guest's initial handshake.
+        // The host element can load after a guest's initial handshake.
         refresh(); window.addEventListener('resize', refresh); window.addEventListener('deck-focus-change', refresh);
         let queued = false;
         new MutationObserver(() => {

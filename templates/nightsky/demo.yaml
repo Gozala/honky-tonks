@@ -324,106 +324,108 @@ rule!:
     - assert: nightsky-active-track
       where: { this: ?this }
 
-component!: &nightsky-demo-importer
-  module: |
-    // Optional catalog demo installer. No upload happens before an explicit click.
-    // The encoded demonstration is retained in Tonk facts/history; normal playback
-    // uses native blobs after the ready command removes this pending view.
-    (() => {
-      const LIMIT = 8 * 1024 * 1024;
-      const sha256 = async bytes => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), byte => byte.toString(16).padStart(2, '0')).join('');
-      const validHash = value => /^[a-f0-9]{64}$/.test(value || '');
-      class NightskyDemoImporter extends HTMLElement {
-        connectedCallback() {
-          if (!this.shadowRoot) this.attachShadow({ mode: 'open' }).innerHTML = `<style>:host{display:block;font:400 16px/1.6 system-ui,sans-serif;margin:12px 0 24px;max-width:720px}h2{font-size:20px;margin:0 0 8px}p{margin:8px 0}button{font:inherit;padding:10px 16px;min-height:44px;border:1px solid currentColor;border-radius:5px;background:transparent;color:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:default}button:focus-visible{outline:2px solid currentColor;outline-offset:3px}.status{font-size:14px;overflow-wrap:anywhere}</style><h2>Gymnopédie No. 1</h2><p>This optional recording and its prepared visual analysis are included in the template. Prepare them once to store the files as Tonk media in this space.</p><button type="button" disabled>Prepare demo</button><p class="status" role="status" aria-live="polite">Reading the included files…</p>`;
-          this._button = this.shadowRoot.querySelector('button');
-          this._status = this.shadowRoot.querySelector('.status');
-          this._click = () => this.prepare(); this._button.addEventListener('click', this._click);
-          this._observer = new MutationObserver(() => { if (this._busy && this._snapshot && !this.unchanged(this._snapshot)) { this._changed = true; this._controller?.abort(); } this.read(); });
-          this._observer.observe(this, { childList: true, subtree: true, characterData: true, attributes: true });
-          this.read();
-        }
-        disconnectedCallback() { this._observer?.disconnect(); this._button?.removeEventListener('click', this._click); this._controller?.abort(); clearTimeout(this._confirmation); }
-        status(message) { this._status.textContent = message; }
-        scope() {
-          const scope = this.getAttribute('with') || '', at = scope.indexOf('@');
-          if (at < 1 || scope.includes('{')) throw new Error('Open this demo inside its destination Tonk space.');
-          const branch = scope.slice(0, at), repository = scope.slice(at + 1);
-          if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(branch) || !/^did:key:[A-Za-z0-9]+$/.test(repository)) throw new Error('The destination space could not be determined.');
-          return '/api/repository/' + repository + '/branch/' + branch + '/blob';
-        }
-        read() {
-          if (this._busy) return;
-          this._assets = [...this.querySelectorAll('.nightsky-demo-asset')].filter(row => row.dataset.demo === this.getAttribute('demo'));
-          const roles = this._assets.map(row => row.dataset.role).sort();
-          this._button.disabled = roles.join(',') !== 'analysis,audio,cover';
-          if (!this._button.disabled) this.status('Ready. This adds the included files to this space; it does not change its home or configure a relay.');
-        }
-        snapshot() {
-          return Object.freeze({ demo: this.getAttribute('demo'), scope: this.getAttribute('with'), version: globalThis.Nightsky?.Modules?.spectralVersion,
-            assets: Object.freeze(this._assets.map(row => Object.freeze({ row, demo: row.dataset.demo, role: row.dataset.role, blob: row.dataset.blob, sha256: row.dataset.sha256, mime: row.dataset.mime, name: row.dataset.name, size: Number(row.querySelector('.byte-count')?.textContent.trim()), encoded: row.querySelector('.encoded')?.textContent.trim() || '' }))) });
-        }
-        unchanged(snapshot) {
-          return this.isConnected && this.getAttribute('demo') === snapshot.demo && this.getAttribute('with') === snapshot.scope && snapshot.assets.every(asset => this.contains(asset.row) && ['demo', 'role', 'blob', 'sha256', 'mime', 'name'].every(key => asset.row.dataset[key] === asset[key]) && Number(asset.row.querySelector('.byte-count')?.textContent.trim()) === asset.size && (asset.row.querySelector('.encoded')?.textContent.trim() || '') === asset.encoded);
-        }
-        async bytes(response, maximum, signal) {
-          if (!response.body) throw new Error('The media response was empty.');
-          const reader = response.body.getReader(), chunks = []; let count = 0;
-          try {
-            while (true) { if (signal.aborted) throw new DOMException('Cancelled', 'AbortError'); const { done, value } = await reader.read(); if (done) break; count += value.byteLength; if (count > maximum) throw new Error('The media response exceeded its declared size.'); chunks.push(value); }
-            const bytes = new Uint8Array(count); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; } return bytes;
-          } finally { await reader.cancel().catch(() => {}); }
-        }
-        async prepare() {
-          if (this._busy || this._button.disabled) return;
-          this.read();
-          if (this._button.disabled) return;
-          this._busy = true; this._button.disabled = true; this._controller = new AbortController();
-          const signal = this._controller.signal;
-          try {
-            if (!crypto?.subtle) throw new Error('This browser cannot verify the included files.');
-            const snapshot = this._snapshot = this.snapshot(), endpoint = this.scope(); this._changed = false;
-            if (!snapshot.demo || !validHash(snapshot.version)) throw new Error('The demo modules are still loading. Try again in a moment.');
-            if (snapshot.assets.map(asset => asset.role).sort().join(',') !== 'analysis,audio,cover' || snapshot.assets.some(asset => asset.demo !== snapshot.demo)) throw new Error('The included files do not belong to the current demo. Wait for its files to load and try again.');
-            const guard = () => { if (signal.aborted) throw new DOMException('Cancelled', 'AbortError'); if (!this.unchanged(snapshot)) { this._changed = true; this._controller.abort(); throw new DOMException('Changed', 'AbortError'); } };
-            for (const asset of snapshot.assets) {
-              guard();
-              const { blob, sha256: expected, mime, name, role, size, encoded } = asset;
-              if (!/^blob:[A-Za-z0-9]+$/.test(blob || '') || !validHash(expected) || !Number.isSafeInteger(size) || size < 1 || size > LIMIT || !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mime || '') || !name || name.length > 120 || /[\r\n]/.test(name)) throw new Error('The included file metadata is invalid.');
-              this.status('Checking ' + role + '…');
-              const existing = await fetch(endpoint + '/' + blob, { signal });
-              if (existing.ok) {
-                const bytes = await this.bytes(existing, size, signal);
-                if (bytes.length !== size || await sha256(bytes) !== expected) throw new Error('An existing demo file did not match its checksum.');
+element!: &nightsky-demo-importer
+  description: "Stores the bundled Satie demo's verified files and activates it when Prepare demo is pressed"
+  method:
+    define: |
+      // Optional catalog demo installer. No upload happens before an explicit click.
+      // The encoded demonstration is retained in Tonk facts/history; normal playback
+      // uses native blobs after the ready command removes this pending view.
+      () => {
+        const LIMIT = 8 * 1024 * 1024;
+        const sha256 = async bytes => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), byte => byte.toString(16).padStart(2, '0')).join('');
+        const validHash = value => /^[a-f0-9]{64}$/.test(value || '');
+        class NightskyDemoImporter extends HTMLElement {
+          connectedCallback() {
+            if (!this.shadowRoot) this.attachShadow({ mode: 'open' }).innerHTML = `<style>:host{display:block;font:400 16px/1.6 system-ui,sans-serif;margin:12px 0 24px;max-width:720px}h2{font-size:20px;margin:0 0 8px}p{margin:8px 0}button{font:inherit;padding:10px 16px;min-height:44px;border:1px solid currentColor;border-radius:5px;background:transparent;color:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:default}button:focus-visible{outline:2px solid currentColor;outline-offset:3px}.status{font-size:14px;overflow-wrap:anywhere}</style><h2>Gymnopédie No. 1</h2><p>This optional recording and its prepared visual analysis are included in the template. Prepare them once to store the files as Tonk media in this space.</p><button type="button" disabled>Prepare demo</button><p class="status" role="status" aria-live="polite">Reading the included files…</p>`;
+            this._button = this.shadowRoot.querySelector('button');
+            this._status = this.shadowRoot.querySelector('.status');
+            this._click = () => this.prepare(); this._button.addEventListener('click', this._click);
+            this._observer = new MutationObserver(() => { if (this._busy && this._snapshot && !this.unchanged(this._snapshot)) { this._changed = true; this._controller?.abort(); } this.read(); });
+            this._observer.observe(this, { childList: true, subtree: true, characterData: true, attributes: true });
+            this.read();
+          }
+          disconnectedCallback() { this._observer?.disconnect(); this._button?.removeEventListener('click', this._click); this._controller?.abort(); clearTimeout(this._confirmation); }
+          status(message) { this._status.textContent = message; }
+          scope() {
+            const scope = this.getAttribute('with') || '', at = scope.indexOf('@');
+            if (at < 1 || scope.includes('{')) throw new Error('Open this demo inside its destination Tonk space.');
+            const branch = scope.slice(0, at), repository = scope.slice(at + 1);
+            if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(branch) || !/^did:key:[A-Za-z0-9]+$/.test(repository)) throw new Error('The destination space could not be determined.');
+            return '/api/repository/' + repository + '/branch/' + branch + '/blob';
+          }
+          read() {
+            if (this._busy) return;
+            this._assets = [...this.querySelectorAll('.nightsky-demo-asset')].filter(row => row.dataset.demo === this.getAttribute('demo'));
+            const roles = this._assets.map(row => row.dataset.role).sort();
+            this._button.disabled = roles.join(',') !== 'analysis,audio,cover';
+            if (!this._button.disabled) this.status('Ready. This adds the included files to this space; it does not change its home or configure a relay.');
+          }
+          snapshot() {
+            return Object.freeze({ demo: this.getAttribute('demo'), scope: this.getAttribute('with'), version: globalThis.Nightsky?.Modules?.spectralVersion,
+              assets: Object.freeze(this._assets.map(row => Object.freeze({ row, demo: row.dataset.demo, role: row.dataset.role, blob: row.dataset.blob, sha256: row.dataset.sha256, mime: row.dataset.mime, name: row.dataset.name, size: Number(row.querySelector('.byte-count')?.textContent.trim()), encoded: row.querySelector('.encoded')?.textContent.trim() || '' }))) });
+          }
+          unchanged(snapshot) {
+            return this.isConnected && this.getAttribute('demo') === snapshot.demo && this.getAttribute('with') === snapshot.scope && snapshot.assets.every(asset => this.contains(asset.row) && ['demo', 'role', 'blob', 'sha256', 'mime', 'name'].every(key => asset.row.dataset[key] === asset[key]) && Number(asset.row.querySelector('.byte-count')?.textContent.trim()) === asset.size && (asset.row.querySelector('.encoded')?.textContent.trim() || '') === asset.encoded);
+          }
+          async bytes(response, maximum, signal) {
+            if (!response.body) throw new Error('The media response was empty.');
+            const reader = response.body.getReader(), chunks = []; let count = 0;
+            try {
+              while (true) { if (signal.aborted) throw new DOMException('Cancelled', 'AbortError'); const { done, value } = await reader.read(); if (done) break; count += value.byteLength; if (count > maximum) throw new Error('The media response exceeded its declared size.'); chunks.push(value); }
+              const bytes = new Uint8Array(count); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; } return bytes;
+            } finally { await reader.cancel().catch(() => {}); }
+          }
+          async prepare() {
+            if (this._busy || this._button.disabled) return;
+            this.read();
+            if (this._button.disabled) return;
+            this._busy = true; this._button.disabled = true; this._controller = new AbortController();
+            const signal = this._controller.signal;
+            try {
+              if (!crypto?.subtle) throw new Error('This browser cannot verify the included files.');
+              const snapshot = this._snapshot = this.snapshot(), endpoint = this.scope(); this._changed = false;
+              if (!snapshot.demo || !validHash(snapshot.version)) throw new Error('The demo modules are still loading. Try again in a moment.');
+              if (snapshot.assets.map(asset => asset.role).sort().join(',') !== 'analysis,audio,cover' || snapshot.assets.some(asset => asset.demo !== snapshot.demo)) throw new Error('The included files do not belong to the current demo. Wait for its files to load and try again.');
+              const guard = () => { if (signal.aborted) throw new DOMException('Cancelled', 'AbortError'); if (!this.unchanged(snapshot)) { this._changed = true; this._controller.abort(); throw new DOMException('Changed', 'AbortError'); } };
+              for (const asset of snapshot.assets) {
                 guard();
-                continue;
+                const { blob, sha256: expected, mime, name, role, size, encoded } = asset;
+                if (!/^blob:[A-Za-z0-9]+$/.test(blob || '') || !validHash(expected) || !Number.isSafeInteger(size) || size < 1 || size > LIMIT || !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mime || '') || !name || name.length > 120 || /[\r\n]/.test(name)) throw new Error('The included file metadata is invalid.');
+                this.status('Checking ' + role + '…');
+                const existing = await fetch(endpoint + '/' + blob, { signal });
+                if (existing.ok) {
+                  const bytes = await this.bytes(existing, size, signal);
+                  if (bytes.length !== size || await sha256(bytes) !== expected) throw new Error('An existing demo file did not match its checksum.');
+                  guard();
+                  continue;
+                }
+                if (existing.status !== 404) throw new Error('Tonk could not check whether this file is already installed. Try again when connected.');
+                if (encoded.length > Math.ceil(size / 3) * 4 + 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) throw new Error('The included file encoding is invalid.');
+                const binary = atob(encoded), bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+                if (bytes.length !== size || await sha256(bytes) !== expected) throw new Error('The included file did not match its checksum.');
+                guard();
+                this.status('Storing ' + role + ' in this space…');
+                const response = await fetch(endpoint, { method: 'POST', signal, headers: { 'Content-Type': mime, 'X-Tonk-Blob-Name': name }, body: bytes });
+                if (!response.ok) throw new Error('Tonk could not store this file. Your existing data has not been replaced.');
+                const result = await response.json();
+                if (result.entity !== blob || result.size !== size || result.contentType !== mime) throw new Error('Tonk returned an unexpected media identity. The demo has not been activated.');
+                guard();
               }
-              if (existing.status !== 404) throw new Error('Tonk could not check whether this file is already installed. Try again when connected.');
-              if (encoded.length > Math.ceil(size / 3) * 4 + 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) throw new Error('The included file encoding is invalid.');
-              const binary = atob(encoded), bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-              if (bytes.length !== size || await sha256(bytes) !== expected) throw new Error('The included file did not match its checksum.');
               guard();
-              this.status('Storing ' + role + ' in this space…');
-              const response = await fetch(endpoint, { method: 'POST', signal, headers: { 'Content-Type': mime, 'X-Tonk-Blob-Name': name }, body: bytes });
-              if (!response.ok) throw new Error('Tonk could not store this file. Your existing data has not been replaced.');
-              const result = await response.json();
-              if (result.entity !== blob || result.size !== size || result.contentType !== mime) throw new Error('Tonk returned an unexpected media identity. The demo has not been activated.');
-              guard();
+              this.status('Files verified. Activating the demo…');
+              const byRole = Object.fromEntries(snapshot.assets.map(asset => [asset.role, asset]));
+              this.dispatchEvent(new CustomEvent('nightsky-demo-ready', { bubbles: true, composed: true, detail: { nightskyDemo: snapshot.demo, nightskyDemoAudio: byRole.audio.blob, nightskyDemoCover: byRole.cover.blob, nightskyDemoAnalysis: byRole.analysis.blob, nightskyDemoAudioSha256: byRole.audio.sha256, nightskyDemoAnalysisDigest: byRole.analysis.sha256, nightskyDemoAlgorithmVersion: snapshot.version } }));
+              clearTimeout(this._confirmation); this._confirmation = setTimeout(() => { if (this.isConnected) { this._busy = false; this._button.textContent = 'Finish preparing'; this.read(); this.status('The files are stored, but activation has not synced yet. Retry to finish; verified files will not be uploaded again.'); } }, 12000);
+            } catch (error) {
+              this._busy = false; this._snapshot = null; this.read();
+              if (this._changed) this.status('The destination or included files changed while preparing. Review the current demo and try again.');
+              else if (error.name !== 'AbortError') this.status(error.message || 'The demonstration could not be prepared. Try again.');
             }
-            guard();
-            this.status('Files verified. Activating the demo…');
-            const byRole = Object.fromEntries(snapshot.assets.map(asset => [asset.role, asset]));
-            this.dispatchEvent(new CustomEvent('nightsky-demo-ready', { bubbles: true, composed: true, detail: { nightskyDemo: snapshot.demo, nightskyDemoAudio: byRole.audio.blob, nightskyDemoCover: byRole.cover.blob, nightskyDemoAnalysis: byRole.analysis.blob, nightskyDemoAudioSha256: byRole.audio.sha256, nightskyDemoAnalysisDigest: byRole.analysis.sha256, nightskyDemoAlgorithmVersion: snapshot.version } }));
-            clearTimeout(this._confirmation); this._confirmation = setTimeout(() => { if (this.isConnected) { this._busy = false; this._button.textContent = 'Finish preparing'; this.read(); this.status('The files are stored, but activation has not synced yet. Retry to finish; verified files will not be uploaded again.'); } }, 12000);
-          } catch (error) {
-            this._busy = false; this._snapshot = null; this.read();
-            if (this._changed) this.status('The destination or included files changed while preparing. Review the current demo and try again.');
-            else if (error.name !== 'AbortError') this.status(error.message || 'The demonstration could not be prepared. Try again.');
           }
         }
+        return NightskyDemoImporter;
       }
-      customElements.get('nightsky-demo-importer') || customElements.define('nightsky-demo-importer', NightskyDemoImporter);
-    })();
 
 nightsky-demo!: &nightsky-satie-demo
   title: "Gymnopédie No. 1"

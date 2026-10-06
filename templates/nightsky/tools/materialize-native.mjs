@@ -16,7 +16,7 @@ export const PUBLIC_FILES = Object.freeze([
   'relay/Caddyfile.runtime-logging.example', 'relay/Caddyfile.site.example',
   'relay/LICENSE', 'relay/README.md', 'relay/package-lock.json', 'relay/package.json',
   'relay/relay-test.mjs', 'relay/server.mjs',
-  'tools/README.md', 'tools/component.mjs',
+  'tools/README.md', 'tools/element.mjs',
   'tools/examples/audio-modules.mjs', 'tools/examples/build-audio-modules.mjs',
   'tools/examples/constellation-graph.mjs', 'tools/examples/frequency-bands.mjs',
   'tools/examples/orbital-motion.mjs', 'tools/examples/spectral-motifs.mjs',
