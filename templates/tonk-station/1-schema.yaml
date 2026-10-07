@@ -1472,15 +1472,25 @@ concept!:
       description: "A label for the inspector (unused; satisfies the concept shape)."
 
 ---
-concept!:
-  this: space:home
-  description: "The space home page, keyed by the repository's own subject DID."
+concept!: &station/home
+  this: station:home-route
+  description: "The station's home page: the deck, rendered at the space's `/` route."
   with:
-    subject:
-      the: dialog.replica/subject
+    replica:
+      the: xyz.tonk.site/replica
       as: entity
       cardinality: one
-      description: "The repository subject (as did:key) representing it's unique identifier\n"
+      description: "The tab's active replica, picked off the site entity."
+    repo:
+      the: xyz.tonk.site/repo
+      as: text
+      cardinality: one
+      description: "The space repository, picked off the site entity."
+    branch:
+      the: xyz.tonk.site/branch
+      as: text
+      cardinality: one
+      description: "The space branch, picked off the site entity."
 
 ---
 concept!:
@@ -3065,27 +3075,6 @@ concept!:
       as: entity
       cardinality: one
       description: "The repository's subject DID (stable identity)"
-
----
-concept!:
-  this: tonk:space/route
-  description: "The space's default page."
-  with:
-    branch:
-      the: xyz.tonk.site/branch
-      as: text
-      cardinality: one
-      description: "The space branch, picked off the site entity."
-    replica:
-      the: xyz.tonk.site/replica
-      as: entity
-      cardinality: one
-      description: "The active replica, picked off the site."
-    repo:
-      the: xyz.tonk.site/repo
-      as: text
-      cardinality: one
-      description: "The space repository, picked off the site entity."
 
 ---
 concept!:

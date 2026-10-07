@@ -64,7 +64,7 @@ Use the user's chosen space. Do not choose an existing space or change its home 
 tonk --space SPACE eval combined.yaml --dry-run
 Then, when the user has requested installation:
 tonk --space SPACE eval combined.yaml
-Evaluate optional data afterwards. Opening the app's entrypoint concept does not require replacing the space's home. If the user wants it as home, add --home ENTRYPOINT to the install command.
+Evaluate optional data afterwards. A template routes the space's / itself with a route! pinned at id:space/home-route, so installing it replaces the space's home; use a new space unless the user wants their home replaced. Spaces have no tonk/space alias: the home is the space's / route. A template without its own / route can be made the home with --home ENTRYPOINT on the install command.
 Use tonk help notation, tonk help views, and tonk help events for the installed CLI's authoritative guide. Compatibility is contributor-declared; build checks validate manifests and files but do not execute community code.
 `);
 await cp(path.join(root, 'CONTRIBUTING.md'), path.join(publicDir, 'CONTRIBUTING.md'));

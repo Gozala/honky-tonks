@@ -8,9 +8,10 @@
 # arriving from other people. It ends with "Get started" and "Read the
 # docs", which opens the technical guide read-only in a sheet.
 #
-# Install it and make it the space's home:
+# Install it; the file routes the space's `/` to this page itself
+# (welcome-home, at the end), so it becomes the space's home:
 #
-#   tonk eval app.yaml --home welcome
+#   tonk eval app.yaml
 #
 # Generated from a `tonk export` of the live Welcome to Tonk space. The page's
 # code, its artwork, its fonts and the guide are embedded, so it renders
@@ -162,7 +163,7 @@ concept!: &welcome
 # Views
 # ==========================================================================
 
-# The page is the directory (what the space home shows) and the detail view;
+# The page is the directory (what the home route renders) and the detail view;
 # it mounts the guide from its own instance through the docs facet.
 view!:
   this: welcome
@@ -1649,3 +1650,38 @@ element!: &wp-fonts
           }
         };
       }
+
+# Home route: the space's `/` renders the Welcome to Tonk page. The route is pinned at
+# id:space/home-route, the id every space home uses, so evaluating this file
+# makes it the space's home and re-routing `/` later replaces it rather than
+# adding a second `/` route. Other pages are more route! entries.
+concept!: &welcome-home
+  this: welcome:home-route
+  description: "The Welcome to Tonk home page, rendered at the space's `/` route."
+  with:
+    replica:
+      description: "The tab's active replica, picked off the site entity."
+      the: xyz.tonk.site/replica
+      as: entity
+      cardinality: one
+    repo:
+      description: "The space repository, picked off the site entity."
+      the: xyz.tonk.site/repo
+      as: text
+      cardinality: one
+    branch:
+      description: "The space branch, picked off the site entity."
+      the: xyz.tonk.site/branch
+      as: text
+      cardinality: one
+
+view!:
+  this: welcome:home-route
+  show:
+    ui: |
+      <tonk-display with="{branch}@{repo}" model=welcome />
+
+route!:
+  this: id:space/home-route
+  path: "/"
+  concept: welcome:home-route

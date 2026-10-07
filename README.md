@@ -50,7 +50,7 @@ For a domain root, omit BASE_PATH. Upload the contents of `dist/client/` to any 
 
 `catalog.json` (schemaVersion 1) includes all metadata, ordered `files`, `optional` flags, SHA-256 and byte length, direct source links, and `entrypoint`. Paths are relative to the serving origin, including the configured base path. `llms.txt` describes discovery and evaluation. Each YAML also has a .txt companion for easy inline reading.
 
-Only the manifest is standard YAML. Never parse/rewrite the application files with an ordinary mapping-based YAML parser: Tonk allows repeated heads such as `attribute!:`. Download and review sources, verify their hashes, then use the user's chosen space and `tonk eval --dry-run` before installation. Optional sample data and replacing a space's home are separate choices.
+Only the manifest is standard YAML. Never parse/rewrite the application files with an ordinary mapping-based YAML parser: Tonk allows repeated heads such as `attribute!:`. Download and review sources, verify their hashes, then use the user's chosen space and `tonk eval --dry-run` before installation. Templates route their own home: each declares a `route!` for `/` pinned at `id:space/home-route`, so installing one replaces the space's home. Install into a new space unless the user wants that. `entrypoint` names the main concept; Tonk's installer routes `/` to it only for a template that does not route `/` itself. Optional sample data is a separate choice.
 
 Build checks validate contribution structure and exported links. They do not execute community code or certify its behavior. Runtime review belongs in the PR.
 

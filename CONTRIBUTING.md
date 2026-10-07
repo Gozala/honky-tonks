@@ -50,9 +50,52 @@ Package behaviour a view cannot express as a custom element declared with `eleme
 
 Use PNG, JPEG, WebP, or passive, self-contained SVG images. Files must be inside the template folder, non-empty, under 8 MB, and not symlinks. Only the listed files, images, and manifest are published. Include all assets the app needs and explain external dependencies. Extra detail images are supported by adding more entries to `images`.
 
-**Do not declare the same name twice, in one file or across files.** Make a copy in Tonk's Discover tab joins all required files into one document, placed after Tonk's standard library, and refuses the copy if any name is declared more than once (`name "x" declared twice — anchors and variables must be unique within a document`). An anchor (`concept!: &x`) and a `name!:` or `db.name!:` statement for `id:x` are both declarations, so keep only one of them. Do not repeat names the standard library already declares, such as `element`, `portal`, `route` or `tonk/agents`, and do not declare `space-home` or `id:tonk/space`: Make a copy adds those from `entrypoint`. Exports of a live space usually contain such duplicates, so remove them before you submit.
+**Do not declare the same name twice, in one file or across files.** Make a copy in Tonk's Discover tab joins all required files into one document, placed after Tonk's standard library, and refuses the copy if any name is declared more than once (`name "x" declared twice — anchors and variables must be unique within a document`). An anchor (`concept!: &x`) and a `name!:` or `db.name!:` statement for `id:x` are both declarations, so keep only one of them. Do not repeat names the standard library already declares, such as `element`, `portal`, `route` or `tonk/agents`. Do not declare `space-home` either: that anchor belongs to the home route `tonk space home` and `--home` write. Exports of a live space usually contain such duplicates, so remove them before you submit.
 
 Use names and attribute namespaces that will not collide with other templates. Describe effects on existing data, including repeated installation. Use a standard license identifier and include a license file in the template folder if its terms differ from the repository's MIT license. Contributors must have the right to distribute their code and images.
+
+## Home and pages
+
+A template routes its own home. A space's home is its `/` route: the route names a concept, the concept resolves on the tab's site entity and picks what it needs from it, and its view renders the page. Declare that concept, its view and the route in your main file, with names of your own:
+
+```yaml
+concept!: &your-home
+  this: your:home-route
+  description: "Your Tonk's home page, rendered at the space's `/` route."
+  with:
+    replica:
+      description: "The tab's active replica, picked off the site entity."
+      the: xyz.tonk.site/replica
+      as: entity
+      cardinality: one
+    repo:
+      description: "The space repository, picked off the site entity."
+      the: xyz.tonk.site/repo
+      as: text
+      cardinality: one
+    branch:
+      description: "The space branch, picked off the site entity."
+      the: xyz.tonk.site/branch
+      as: text
+      cardinality: one
+
+view!:
+  this: your:home-route
+  show:
+    ui: |
+      <tonk-display with="{branch}@{repo}" model=your-main-concept />
+
+route!:
+  this: id:space/home-route
+  path: "/"
+  concept: your:home-route
+```
+
+Pin the concept's `this` to a URI of your own, so it never shares an identity with another template's home concept that picks the same fields. Pin the route to `id:space/home-route`, the id every space home uses: re-routing `/` then replaces the home instead of adding a second `/` route. A route the space writes outranks the standard library's default `/`, so Tonk updates leave your home in place. Installing the template replaces the space's existing home, so say so in `notes`.
+
+Keep `entrypoint` in the manifest: it names your main concept, and Make a copy routes `/` to it only for a template that does not route `/` itself. The `tonk/space` alias that older spaces used for their home no longer exists; do not declare or render `id:tonk/space` or `model=tonk/space`.
+
+More pages are more `route!` entries. A path can capture parameters: `{param}` matches one segment and `{*span}` matches the rest of the path, slashes included. Each capture is stamped on the site entity as `xyz.tonk.site/<param>`, so the route's concept picks it like `repo` above (`the: xyz.tonk.site/param`). The standard library already routes `/{*model}`, `/{*entity}@{*model}` and `/{*entity}@{*model}!{*view}`; a literal path such as `/settings` wins over those patterns. Unlike the home, give other routes no pinned `this` unless you want a later route to replace them.
 
 ## Check and submit
 

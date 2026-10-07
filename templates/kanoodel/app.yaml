@@ -168,7 +168,8 @@
 
 # Kanoodel — fresh app template
 # Derived from `tonk --space kanoodel export`; no poll or participant data.
-# Tonk YAML notation: import with `tonk --space NEW_SPACE eval app.yaml --home kn-poll`.
+# Tonk YAML notation: import with `tonk --space NEW_SPACE eval app.yaml`.
+# The file routes the space's `/` to the poll itself (kn-home, at the end).
 
 command!: &kn-answer
   this: concept:82t8Acrp6rB7coGPnMmYgDbH5m5BE1ymZdmaS5dG9rtt
@@ -2823,3 +2824,38 @@ rule!:
         app: ?app
         def: _
         this: ?this
+
+# Home route: the space's `/` renders the kanoodel poll. The route is pinned at
+# id:space/home-route, the id every space home uses, so evaluating this file
+# makes it the space's home and re-routing `/` later replaces it rather than
+# adding a second `/` route. Other pages are more route! entries.
+concept!: &kn-home
+  this: kn:home-route
+  description: "Kanoodel's home page: the poll, rendered at the space's `/` route."
+  with:
+    replica:
+      description: "The tab's active replica, picked off the site entity."
+      the: xyz.tonk.site/replica
+      as: entity
+      cardinality: one
+    repo:
+      description: "The space repository, picked off the site entity."
+      the: xyz.tonk.site/repo
+      as: text
+      cardinality: one
+    branch:
+      description: "The space branch, picked off the site entity."
+      the: xyz.tonk.site/branch
+      as: text
+      cardinality: one
+
+view!:
+  this: kn:home-route
+  show:
+    ui: |
+      <tonk-display with="{branch}@{repo}" model=kn-poll />
+
+route!:
+  this: id:space/home-route
+  path: "/"
+  concept: kn:home-route

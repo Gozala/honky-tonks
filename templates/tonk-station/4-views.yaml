@@ -422,9 +422,9 @@ xyz.tonk.view!:
 
 ---
 xyz.tonk.view!:
-  this: space:home
+  this: station:home-route
   ui: |
-    <tonk-display model=deck/canvas />
+    <tonk-display with="{branch}@{repo}" model=deck/canvas />
 
 ---
 xyz.tonk.view!:
@@ -1873,22 +1873,6 @@ xyz.tonk.view!:
     <tonk-display entity={this} model={concept} />
 
 ---
-xyz.tonk.view!:
-  this: tonk:space/route
-  ui: |
-    <tonk-display with="{branch}@{repo}" entity={replica} model=tonk/space />
-
----
-xyz.tonk.view!:
-  this: tonk:workspace/shell
-  ui: |
-    <div class="workspace-shell" style="display:flex; flex-direction:column; min-height:100dvh;">
-      <div class='display-view-slot'>
-        <tonk-display entity={replica} model=tonk/space with="{branch}@{repo}" />
-      </div>
-    </div>
-
----
 # ---- 07-view-bindings.yaml ----
 # Event declarations are colocated so Tonk rebuilds identical compiled bindings.
 
@@ -1924,28 +1908,15 @@ view!:
 
 ---
 # ---- 08-routes.yaml ----
+# The space's home: `/` renders the deck. The route is pinned at
+# id:space/home-route, the id every space home uses, so re-routing `/` later
+# replaces it rather than adding a second `/` route. The other page routes
+# (`/{*model}`, `/{*entity}@{*model}`, `/{*entity}@{*model}!{*view}`) are the
+# standard library's, so they are left to it.
 xyz.tonk.route!:
-  this: did:key:z6Mk9NhaYfdBuww1xrLY1CSyuZuSViirTxFzRDRxdS5s6RqR
-  concept: tonk:workspace/shell
+  this: id:space/home-route
+  concept: station:home-route
   path: "/"
-
----
-xyz.tonk.route!:
-  this: did:key:z6MkBkbXuQdMfaeGoyAYz8BZZe5eHbvF9ZKJcQCR8h5DZjKX
-  concept: tonk:artifact/route
-  path: "/{*entity}@{*model}"
-
----
-xyz.tonk.route!:
-  this: did:key:z6MkGkmy97tpUYrCAXz3yTAbxKFkpCvtk1ViXgFp7EeEoQ5W
-  concept: tonk:directory/route
-  path: "/{*model}"
-
----
-xyz.tonk.route!:
-  this: did:key:z6MkJ5NDPWmBy3ENhokVbx8c2vBHn98vHk9DQKm3vk4wBtsd
-  concept: tonk:adhoc/route
-  path: "/{*entity}@{*model}!{*view}"
 
 ---
 # ---- 09-events-elements.yaml ----
