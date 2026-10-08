@@ -35,7 +35,7 @@ export function registryDocument(templates, site, commit) {
     page: `${gallery}/templates/${t.slug}/`,
     source: `${repository}/tree/${site.branch}/templates/${t.slug}`,
     preview: t.images[0].file,
-    files: t.files.map(f => ({ name: f.file, description: f.description, installation: f.optional ? 'optional' : 'required' })),
+    files: t.files.map((f, i) => ({ position: i + 1, name: f.file, description: f.description, installation: f.optional ? 'optional' : 'required' })),
   }));
   // The revision names which templates are listed and what they say, not
   // the commit that carried them: a merge that changes no template
@@ -67,6 +67,7 @@ export function registryDocument(templates, site, commit) {
         `  template: ${quote(r.slug)}`,
         `  name: ${quote(f.name)}`,
         `  description: ${quote(f.description)}`,
+        `  position: ${f.position}`,
         `  installation: ${quote(f.installation)}`,
         `  content: !include/asset ../../templates/${r.slug}/${f.name}`,
         `  revision: ${quote(revision)}`,

@@ -44,6 +44,7 @@ test('template files are published as assets, never evaluated', async () => {
         `  name: ${JSON.stringify(f.file)}`,
       ].join('\n');
       assert.ok(text.includes(block), `${t.slug}/${f.file}`);
+      assert.ok(text.includes(`${block}\n  description: ${JSON.stringify(f.description)}\n  position: ${t.files.indexOf(f) + 1}\n`), `${t.slug}/${f.file} position`);
       assert.ok(text.includes(`  content: !include/asset ../../templates/${t.slug}/${f.file}\n`), `${t.slug}/${f.file}`);
     }
   }
@@ -58,6 +59,15 @@ test('which files a template lists is part of the revision', async () => {
   const withSource = withFile.find(t => t.files.length > 1) ?? withFile[0];
   withSource.files = withSource.files.slice(0, -1);
   assert.notEqual(registryDocument(withFile, site, commit).revision, revision);
+});
+
+test('install order is part of the revision', async () => {
+  const templates = await loadCatalog();
+  const { revision } = registryDocument(templates, site, commit);
+  const reordered = structuredClone(templates);
+  const station = reordered.find(t => t.files.length > 1);
+  station.files.reverse();
+  assert.notEqual(registryDocument(reordered, site, commit).revision, revision);
 });
 
 test('the commit is recorded on the catalog without changing the revision', async () => {

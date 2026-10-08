@@ -125,6 +125,12 @@ attribute!: &honky-file-description
   as: text
   cardinality: one
 
+attribute!: &honky-file-position
+  description: "Where the file comes in the template's install order, from 1. An installer evaluates the required files in this order; later ones build on earlier ones (tonk-station's schema before its rules)."
+  the: xyz.honkytonks.file/position
+  as: unsigned-integer
+  cardinality: one
+
 attribute!: &honky-file-installation
   description: "Whether installing the template needs this file: required or optional"
   the: xyz.honkytonks.file/installation
@@ -223,6 +229,7 @@ concept!: &honky/file
     template: honky-file-template
     name: honky-file-name
     description: honky-file-description
+    position: honky-file-position
     installation: honky-file-installation
     content: honky-file-content
     revision: honky-revision
@@ -233,6 +240,7 @@ concept!: &honky/listed-file
     template: honky-file-template
     name: honky-file-name
     description: honky-file-description
+    position: honky-file-position
     installation: honky-file-installation
     content: honky-file-content
     listed: honky-listed
@@ -251,6 +259,7 @@ rule!:
         template: ?template
         name: ?name
         description: ?description
+        position: ?position
         installation: ?installation
         content: ?content
         revision: ?listed
@@ -341,14 +350,14 @@ view!:
     ui: |
       <article class="honky-file">
         <h1>{template}/{name}</h1>
-        <p class="honky-meta">{installation}</p>
+        <p class="honky-meta">#{position} · {installation}</p>
         <p>{description}</p>
         <tonk-display entity={content} model=tonk:asset></tonk-display>
       </article>
     directory: |
       <ul class="honky-files">
         <li subject={this}>
-          <strong>{template}/{name}</strong> ({installation}): {description}
+          <strong>{template}/{name}</strong> (#{position}, {installation}): {description}
           <tonk-display entity={content} model=tonk:asset></tonk-display>
         </li>
       </ul>
