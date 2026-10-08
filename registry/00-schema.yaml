@@ -6,7 +6,10 @@
 # its facts. Each publish therefore stamps every template it lists, and the
 # catalog record, with one revision; `honky/listed` is derived by a rule
 # that keeps only templates whose stamp matches the catalog's, and that is
-# what the views show.
+# what the views show. A template's notation files are stored the same way,
+# as `honky/file` records holding each file as an asset: the registry
+# describes templates and never evaluates them, so nothing a template
+# declares reaches this space. `honky/listed-file` keeps the current ones.
 
 attribute!: &honky-slug
   description: "Folder name and stable identifier of the template"
@@ -104,6 +107,36 @@ attribute!: &honky-commit
   as: text
   cardinality: one
 
+attribute!: &honky-file-template
+  description: "Slug of the template this file belongs to"
+  the: xyz.honkytonks.file/template
+  as: text
+  cardinality: one
+
+attribute!: &honky-file-name
+  description: "File name of a template source, as the template lists it"
+  the: xyz.honkytonks.file/name
+  as: text
+  cardinality: one
+
+attribute!: &honky-file-description
+  description: "What a template source file contains, and when to install it"
+  the: xyz.honkytonks.file/description
+  as: text
+  cardinality: one
+
+attribute!: &honky-file-installation
+  description: "Whether installing the template needs this file: required or optional"
+  the: xyz.honkytonks.file/installation
+  as: text
+  cardinality: one
+
+attribute!: &honky-file-content
+  description: "The file's notation source, stored as an asset rather than evaluated"
+  the: xyz.honkytonks.file/content
+  as: entity
+  cardinality: one
+
 # Only the rule below writes this, so only listed templates carry it.
 # Concepts match by shape, so without an attribute of its own
 # `honky/listed` would match every stored template, current or not.
@@ -184,6 +217,44 @@ rule!:
         preview: ?preview
         revision: ?listed
 
+concept!: &honky/file
+  description: "A notation source file of a template, as of some catalog revision. Stored, not evaluated: installing the template evaluates it."
+  with:
+    template: honky-file-template
+    name: honky-file-name
+    description: honky-file-description
+    installation: honky-file-installation
+    content: honky-file-content
+    revision: honky-revision
+
+concept!: &honky/listed-file
+  description: "A template source file the current catalog revision lists"
+  with:
+    template: honky-file-template
+    name: honky-file-name
+    description: honky-file-description
+    installation: honky-file-installation
+    content: honky-file-content
+    listed: honky-listed
+
+rule!:
+  description: "A template file is listed while its revision is the catalog's current one."
+  assert: honky/listed-file
+  when:
+    - assert: honky/catalog
+      where:
+        this: id:honky-tonks/catalog
+        revision: ?listed
+    - assert: honky/file
+      where:
+        this: ?this
+        template: ?template
+        name: ?name
+        description: ?description
+        installation: ?installation
+        content: ?content
+        revision: ?listed
+
 # Filters the cards rendered inside it as the reader types. The cards are
 # ordinary view output, so the filter only hides and shows them; it never
 # reads the store. A re-render (a new publish landing while the page is
@@ -233,6 +304,7 @@ view!:
         <p class="honky-description">{features}</p>
         <h2>Install</h2>
         <p>Open it from Discover in Tonk, or read the gallery page. Entry point: <code>{entrypoint}</code>. Tested with: {compatibility}</p>
+        <p>Its notation files are in this space as <code>honky/listed-file</code> records for template <code>{slug}</code>.</p>
         <p><a href={page} target="_blank" rel="noopener">Gallery page</a> · <a href={source} target="_blank" rel="noopener">Source</a></p>
       </article>
     directory: |
@@ -260,3 +332,23 @@ view!:
           </li>
         </ul>
       </honky-catalog>
+
+view!:
+  this: honky/listed-file
+  show:
+    title: "{template}/{name}"
+    label: "{name}"
+    ui: |
+      <article class="honky-file">
+        <h1>{template}/{name}</h1>
+        <p class="honky-meta">{installation}</p>
+        <p>{description}</p>
+        <tonk-display entity={content} model=tonk:asset></tonk-display>
+      </article>
+    directory: |
+      <ul class="honky-files">
+        <li subject={this}>
+          <strong>{template}/{name}</strong> ({installation}): {description}
+          <tonk-display entity={content} model=tonk:asset></tonk-display>
+        </li>
+      </ul>

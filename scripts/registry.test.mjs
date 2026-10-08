@@ -17,7 +17,8 @@ test('every catalog template is asserted under one revision, with the catalog re
     assert.ok(text.includes(`  preview: !include/asset ../../templates/${t.slug}/${t.images[0].file}\n`), t.slug);
   }
   assert.equal(text.split('honky/template!:').length - 1, templates.length);
-  assert.equal(text.split(`  revision: "${revision}"`).length - 1, templates.length + 1);
+  const files = templates.reduce((n, t) => n + t.files.length, 0);
+  assert.equal(text.split(`  revision: "${revision}"`).length - 1, templates.length + files + 1);
   assert.ok(text.trimEnd().endsWith(`honky/catalog!:\n  this: id:honky-tonks/catalog\n  revision: "${revision}"\n  commit: "${commit}"`));
 });
 
@@ -29,6 +30,34 @@ test('the revision follows content: same catalog, same revision; any change, a n
   edited[0].summary += ' Edited.';
   assert.notEqual(registryDocument(edited, site, commit).revision, revision);
   assert.notEqual(registryDocument(templates.slice(1), site, commit).revision, revision, 'removing a template changes the listing');
+});
+
+test('template files are published as assets, never evaluated', async () => {
+  const templates = await loadCatalog();
+  const { text } = registryDocument(templates, site, commit);
+  for (const t of templates) {
+    for (const f of t.files) {
+      const block = [
+        'honky/file!:',
+        `  this: id:honky-tonks/template/${t.slug}/file/${f.file}`,
+        `  template: ${JSON.stringify(t.slug)}`,
+        `  name: ${JSON.stringify(f.file)}`,
+      ].join('\n');
+      assert.ok(text.includes(block), `${t.slug}/${f.file}`);
+      assert.ok(text.includes(`  content: !include/asset ../../templates/${t.slug}/${f.file}\n`), `${t.slug}/${f.file}`);
+    }
+  }
+  // Only the asset include reaches a source file: no plain or text include.
+  assert.ok(!/!include(\/text)? /.test(text));
+});
+
+test('which files a template lists is part of the revision', async () => {
+  const templates = await loadCatalog();
+  const { revision } = registryDocument(templates, site, commit);
+  const withFile = structuredClone(templates);
+  const withSource = withFile.find(t => t.files.length > 1) ?? withFile[0];
+  withSource.files = withSource.files.slice(0, -1);
+  assert.notEqual(registryDocument(withFile, site, commit).revision, revision);
 });
 
 test('the commit is recorded on the catalog without changing the revision', async () => {
