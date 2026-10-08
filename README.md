@@ -50,16 +50,17 @@ For a domain root, omit BASE_PATH. Upload the contents of `dist/client/` to any 
 
 The catalog is also published into a Tonk space as data, so agents and views can query it there. `.github/workflows/registry.yml` runs `npm run registry`, which writes three notation documents to `generated/registry/`:
 
-- `00-schema.yaml`, copied from `registry/`: the `honky/template` and `honky/catalog` concepts, the derived `honky/listed` concept, and the views, including a search box over the template cards;
-- `10-templates.yaml`, generated from every `template.yaml`: one `honky/template` per template, with its first image stored as an asset (`!include/asset`), and the `honky/catalog` record;
+- `00-schema.yaml`, copied from `registry/`: the catalog's concepts, the publish commands, the rules that reconcile the stored catalog with a publish, the `catalog/listing` and `catalog/listed-file` concepts readers query, and the views, including a search box over the template cards;
+- `10-catalog.yaml`, generated from every `template.yaml`: the publish document. It asserts each identity (the catalog by its origin, an entry by its slug, a file by its entry's slug and path) and says what the catalog is now with transient commands: `catalog/release`, then per template `catalog/publish` with its whole entry, `catalog/publish-feature` per feature and `catalog/publish-file` per notation file. Images and notation files are stored as assets (`!include/asset`), never evaluated;
 - `90-home.yaml`, copied from `registry/`: puts the searchable catalog on the space's home.
 
 Pull requests evaluate them without committing. A merge to `main` publishes them with [tonk-publish-action](https://github.com/Gozala/tonk-publish-action), as one commit. Set the `TONK_REGISTRY_INVITE` secret to an agent connection link for the registry space ("connect agent" in Tonk). Without the secret, the workflow still evaluates the documents against a scratch space on the runner.
 
-Publishing only asserts, so a template removed from the repository keeps its facts. Each publish stamps the templates it lists, and the catalog record, with one revision derived from their content; `honky/listed` is a rule that shows only templates carrying the catalog's current revision. Query the current catalog with:
+The schema's inductive rules fire at commit: what a publish lists is asserted, and a member, feature or file the stored catalog holds but the publish no longer lists is retracted. Everything else stays as it is, so a publish that changes no template writes only the new commit. Required notation files install in path order, so a template whose files depend on each other numbers them. Query the current catalog with:
 
 ```sh
-tonk --space SPACE query honky/listed --json
+tonk --space SPACE query catalog/listing --json
+tonk --space SPACE query catalog/listed-file --json
 ```
 
 ## Agent contract

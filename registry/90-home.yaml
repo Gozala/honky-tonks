@@ -1,5 +1,5 @@
 # Puts the catalog on the registry space's home: the same statements
-# `tonk eval --home honky/listed` writes. Re-publishing it changes nothing.
+# `tonk eval --home catalog/listing` writes. Re-publishing it changes nothing.
 
 concept!: &space-home
   this: space:home
@@ -14,7 +14,7 @@ view!:
   this: space:home
   show:
     ui: |
-      <tonk-display model=honky/listed />
+      <tonk-display model=catalog/listing />
 
 name!:
   this: id:tonk/space

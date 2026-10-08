@@ -1,6 +1,6 @@
 name: Publish registry
 # Publishes the template catalog into the registry Tonk space as data:
-# every template, a `honky/listed` view of the current ones, and a
+# every template, a `catalog/listing` view of the current ones, and a
 # searchable catalog on the space's home. Pull requests evaluate the same
 # documents without committing; a merge to main publishes them.
 #
@@ -74,7 +74,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/space" && cd "$RUNNER_TEMP/space"
           tonk space new registry
           tonk eval "$GITHUB_WORKSPACE"/generated/registry/*.yaml --quiet
-          tonk query honky/listed --json | jq -e "length == $(ls -d "$GITHUB_WORKSPACE"/templates/*/ | wc -l)"
+          tonk query catalog/members --json | jq -e "length == $(ls -d "$GITHUB_WORKSPACE"/templates/*/ | wc -l)"
       - name: Summary
         if: always()
         env:

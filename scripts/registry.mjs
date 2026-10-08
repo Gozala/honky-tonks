@@ -1,10 +1,9 @@
 // Generate the registry documents that CI publishes into the registry space:
-// registry/00-schema.yaml as written, one notation document asserting every
-// template in the catalog under a revision derived from its content, and
-// registry/90-home.yaml, which puts the catalog on the space's home.
+// registry/00-schema.yaml as written, the publish document saying what the
+// catalog is now, and registry/90-home.yaml, which puts the catalog on the
+// space's home.
 // Run with `npm run registry`; the output directory is generated/registry/.
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { loadCatalog, root } from './catalog.mjs';
@@ -14,74 +13,61 @@ import { loadCatalog, root } from './catalog.mjs';
 // a URI reference) or break the document's structure.
 const quote = value => JSON.stringify(value);
 
-// `commit` is the repository commit being published. It is recorded on the
-// catalog record, outside the revision, so every publish asserts it and
-// the space shows which commit it was deployed from.
+// The publish document: the catalog as it is now, written as transient
+// commands that registry/00-schema.yaml's rules reconcile the stored
+// catalog with. Identities (the catalog, each entry, each file) are
+// asserted directly, since a rule cannot mint an entity; re-asserting one
+// is a no-op. `commit` is the origin commit being published.
 export function registryDocument(templates, site, commit) {
   const gallery = site.url.replace(/\/$/, '');
-  const repository = site.repository.replace(/\/$/, '');
-  const records = templates.map(t => ({
-    slug: t.slug,
-    name: t.name,
-    summary: t.summary,
-    description: t.description.trim(),
-    features: t.features.map(f => `• ${f}`).join('\n'),
-    category: t.category,
-    version: t.version,
-    license: t.license,
-    author: t.author.name,
-    entrypoint: t.entrypoint,
-    compatibility: t.compatibility,
-    page: `${gallery}/templates/${t.slug}/`,
-    source: `${repository}/tree/${site.branch}/templates/${t.slug}`,
-    preview: t.images[0].file,
-    files: t.files.map((f, i) => ({ position: i + 1, name: f.file, description: f.description, installation: f.optional ? 'optional' : 'required' })),
-  }));
-  // The revision names which templates are listed and what they say, not
-  // the commit that carried them: a merge that changes no template
-  // publishes the same facts, so it commits nothing. A changed image needs
-  // no new revision, because the template's preview fact changes with it;
-  // nor does a changed source file, whose content fact does. Which files a
-  // template lists, and what they say, are part of the revision.
-  const revision = createHash('sha256').update(JSON.stringify(records)).digest('hex').slice(0, 16);
-  const blocks = records.map(r => {
-    const fields = Object.entries(r)
-      .filter(([key]) => key !== 'preview' && key !== 'files')
-      .map(([key, value]) => `  ${key}: ${quote(value)}`);
-    return [
-      'honky/template!:',
-      `  this: id:honky-tonks/template/${r.slug}`,
-      ...fields,
-      `  preview: !include/asset ../../templates/${r.slug}/${r.preview}`,
-      `  revision: ${quote(revision)}`,
-    ].join('\n');
-  });
-  // A template's notation files are published as assets, not evaluated:
-  // the registry describes templates, and installing one is what
-  // evaluates its files, into the installer's own space.
-  const files = records.flatMap(r =>
-    r.files.map(f =>
-      [
-        'honky/file!:',
-        `  this: id:honky-tonks/template/${r.slug}/file/${f.name}`,
-        `  template: ${quote(r.slug)}`,
-        `  name: ${quote(f.name)}`,
-        `  description: ${quote(f.description)}`,
-        `  position: ${f.position}`,
-        `  installation: ${quote(f.installation)}`,
-        `  content: !include/asset ../../templates/${r.slug}/${f.name}`,
-        `  revision: ${quote(revision)}`,
-      ].join('\n'),
-    ),
-  );
-  const catalog = [
-    'honky/catalog!:',
-    '  this: id:honky-tonks/catalog',
-    `  revision: ${quote(revision)}`,
-    `  commit: ${quote(commit)}`,
-  ].join('\n');
+  const origin = site.repository.replace(/\/$/, '');
+  const blocks = [
+    ['catalog!:', `  origin: ${quote(origin)}`],
+    ['catalog/release!:', `  origin: ${quote(origin)}`, `  commit: ${quote(commit)}`],
+  ];
+  for (const t of templates) {
+    const dir = `../../templates/${t.slug}`;
+    blocks.push(['catalog/entry!:', `  slug: ${quote(t.slug)}`]);
+    const info = {
+      name: t.name,
+      summary: t.summary,
+      description: t.description.trim(),
+      category: t.category,
+      version: t.version,
+      license: t.license,
+      author: t.author.name,
+      entrypoint: t.entrypoint,
+      compatibility: t.compatibility,
+      page: `${gallery}/templates/${t.slug}/`,
+      source: `${origin}/tree/${site.branch}/templates/${t.slug}`,
+    };
+    blocks.push([
+      'catalog/publish!:',
+      `  origin: ${quote(origin)}`,
+      `  slug: ${quote(t.slug)}`,
+      ...Object.entries(info).map(([key, value]) => `  ${key}: ${quote(value)}`),
+      `  preview: !include/asset ${dir}/${t.images[0].file}`,
+    ]);
+    for (const feature of t.features) {
+      blocks.push(['catalog/publish-feature!:', `  slug: ${quote(t.slug)}`, `  feature: ${quote(feature)}`]);
+    }
+    // A template's notation files are published as assets, never
+    // evaluated: installing the template evaluates them, into the
+    // installer's own space.
+    for (const file of t.files) {
+      blocks.push(['catalog/file!:', `  slug: ${quote(t.slug)}`, `  path: ${quote(file.file)}`]);
+      blocks.push([
+        'catalog/publish-file!:',
+        `  slug: ${quote(t.slug)}`,
+        `  path: ${quote(file.file)}`,
+        `  description: ${quote(file.description)}`,
+        `  optional: ${file.optional === true}`,
+        `  content: !include/asset ${dir}/${file.file}`,
+      ]);
+    }
+  }
   const header = '# Generated by scripts/registry.mjs from templates/*/template.yaml. Do not edit.\n';
-  return { revision, text: header + '\n' + [...blocks, ...files, catalog].join('\n\n') + '\n' };
+  return header + '\n' + blocks.map(lines => lines.join('\n')).join('\n\n') + '\n';
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -92,7 +78,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await mkdir(out, { recursive: true });
   for (const file of ['00-schema.yaml', '90-home.yaml']) await cp(path.join(root, 'registry', file), path.join(out, file));
   const commit = process.env.GITHUB_SHA || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-  const { revision, text } = registryDocument(templates, site, commit);
-  await writeFile(path.join(out, '10-templates.yaml'), text);
-  console.log(`Registry: ${templates.length} templates at revision ${revision}, commit ${commit.slice(0, 12)}, in ${path.relative(root, out)}/`);
+  await writeFile(path.join(out, '10-catalog.yaml'), registryDocument(templates, site, commit));
+  console.log(`Registry: ${templates.length} templates at commit ${commit.slice(0, 12)}, in ${path.relative(root, out)}/`);
 }
