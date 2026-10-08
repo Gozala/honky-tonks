@@ -1,0 +1,255 @@
+# Honky Tonks registry: the template catalog as Tonk data.
+#
+# CI evaluates this file, then the generated templates document
+# (scripts/registry.mjs), into the registry space on every merge to main.
+# Publishing only asserts, so a template removed from the repository keeps
+# its facts. Each publish therefore stamps every template it lists, and the
+# catalog record, with one revision; `honky/listed` is derived by a rule
+# that keeps only templates whose stamp matches the catalog's, and that is
+# what the views show.
+
+attribute!: &honky-slug
+  description: "Folder name and stable identifier of the template"
+  the: xyz.honkytonks.template/slug
+  as: text
+  cardinality: one
+
+attribute!: &honky-name
+  description: "Display name of the template"
+  the: xyz.honkytonks.template/name
+  as: text
+  cardinality: one
+
+attribute!: &honky-summary
+  description: "One or two sentences about the template"
+  the: xyz.honkytonks.template/summary
+  as: text
+  cardinality: one
+
+attribute!: &honky-description
+  description: "Full plain-text description of the template"
+  the: xyz.honkytonks.template/description
+  as: text
+  cardinality: one
+
+attribute!: &honky-features
+  description: "The template's features, one per line"
+  the: xyz.honkytonks.template/features
+  as: text
+  cardinality: one
+
+attribute!: &honky-category
+  description: "Gallery category, such as Writing or Workspace"
+  the: xyz.honkytonks.template/category
+  as: text
+  cardinality: one
+
+attribute!: &honky-version
+  description: "Template version, x.y.z"
+  the: xyz.honkytonks.template/version
+  as: text
+  cardinality: one
+
+attribute!: &honky-license
+  description: "License identifier the template is published under"
+  the: xyz.honkytonks.template/license
+  as: text
+  cardinality: one
+
+attribute!: &honky-author
+  description: "Public name of the template's author"
+  the: xyz.honkytonks.template/author
+  as: text
+  cardinality: one
+
+attribute!: &honky-entrypoint
+  description: "Concept to open once the template is installed"
+  the: xyz.honkytonks.template/entrypoint
+  as: text
+  cardinality: one
+
+attribute!: &honky-compatibility
+  description: "Tonk versions the author tested the template with"
+  the: xyz.honkytonks.template/compatibility
+  as: text
+  cardinality: one
+
+attribute!: &honky-page
+  description: "The template's page in the public gallery"
+  the: xyz.honkytonks.template/page
+  as: text
+  cardinality: one
+
+attribute!: &honky-source
+  description: "The template's folder in the Git repository"
+  the: xyz.honkytonks.template/source
+  as: text
+  cardinality: one
+
+attribute!: &honky-preview
+  description: "The template's first gallery image, a blob"
+  the: xyz.honkytonks.template/preview
+  as: entity
+  cardinality: one
+
+attribute!: &honky-revision
+  description: "Catalog revision that last listed this record"
+  the: xyz.honkytonks.catalog/revision
+  as: text
+  cardinality: one
+
+# Only the rule below writes this, so only listed templates carry it.
+# Concepts match by shape, so without an attribute of its own
+# `honky/listed` would match every stored template, current or not.
+attribute!: &honky-listed
+  description: "The catalog revision a template is listed in, derived by rule"
+  the: xyz.honkytonks.catalog/listed
+  as: text
+  cardinality: one
+
+concept!: &honky/template
+  description: "A template published in the Honky Tonks gallery, as of some catalog revision"
+  with:
+    slug: honky-slug
+    name: honky-name
+    summary: honky-summary
+    description: honky-description
+    features: honky-features
+    category: honky-category
+    version: honky-version
+    license: honky-license
+    author: honky-author
+    entrypoint: honky-entrypoint
+    compatibility: honky-compatibility
+    page: honky-page
+    source: honky-source
+    preview: honky-preview
+    revision: honky-revision
+
+concept!: &honky/catalog
+  description: "The Honky Tonks catalog: which revision of it is current"
+  with:
+    revision: honky-revision
+
+concept!: &honky/listed
+  description: "A template the current catalog revision lists"
+  with:
+    slug: honky-slug
+    name: honky-name
+    summary: honky-summary
+    description: honky-description
+    features: honky-features
+    category: honky-category
+    version: honky-version
+    license: honky-license
+    author: honky-author
+    entrypoint: honky-entrypoint
+    compatibility: honky-compatibility
+    page: honky-page
+    source: honky-source
+    preview: honky-preview
+    listed: honky-listed
+
+rule!:
+  description: "A template is listed while its revision is the catalog's current one."
+  assert: honky/listed
+  when:
+    - assert: honky/catalog
+      where:
+        this: id:honky-tonks/catalog
+        revision: ?listed
+    - assert: honky/template
+      where:
+        this: ?this
+        slug: ?slug
+        name: ?name
+        summary: ?summary
+        description: ?description
+        features: ?features
+        category: ?category
+        version: ?version
+        license: ?license
+        author: ?author
+        entrypoint: ?entrypoint
+        compatibility: ?compatibility
+        page: ?page
+        source: ?source
+        preview: ?preview
+        revision: ?listed
+
+# Filters the cards rendered inside it as the reader types. The cards are
+# ordinary view output, so the filter only hides and shows them; it never
+# reads the store. A re-render (a new publish landing while the page is
+# open) is filtered again through the observer.
+element!: &honky-catalog
+  description: "Search box over the template cards rendered inside it"
+  method:
+    connected: |
+      (self) => {
+        const input = self.querySelector('input[type=search]');
+        const empty = self.querySelector('[data-empty]');
+        const apply = () => {
+          const words = (input?.value ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+          let shown = 0;
+          for (const card of self.querySelectorAll('[data-search]')) {
+            const haystack = card.dataset.search.toLowerCase();
+            const match = words.every(word => haystack.includes(word));
+            card.hidden = !match;
+            if (match) shown++;
+          }
+          if (empty) empty.hidden = shown > 0;
+        };
+        self.__apply = apply;
+        input?.addEventListener('input', apply);
+        self.__observer = new MutationObserver(apply);
+        self.__observer.observe(self, { childList: true, subtree: true });
+        apply();
+      }
+    disconnected: |
+      (self) => {
+        self.__observer?.disconnect();
+      }
+
+view!:
+  this: honky/listed
+  show:
+    title: "{name}"
+    label: "{name}"
+    ui: |
+      <article class="honky-detail">
+        <tonk-display entity={preview} model=tonk:blob></tonk-display>
+        <h1>{name}</h1>
+        <p class="honky-meta">{category} · v{version} · {license} · by {author}</p>
+        <p>{summary}</p>
+        <p class="honky-description">{description}</p>
+        <h2>Features</h2>
+        <p class="honky-description">{features}</p>
+        <h2>Install</h2>
+        <p>Open it from Discover in Tonk, or read the gallery page. Entry point: <code>{entrypoint}</code>. Tested with: {compatibility}</p>
+        <p><a href={page} target="_blank" rel="noopener">Gallery page</a> · <a href={source} target="_blank" rel="noopener">Source</a></p>
+      </article>
+    directory: |
+      <honky-catalog>
+        <style>
+          honky-catalog { display: block; padding: 16px; font: inherit; }
+          honky-catalog input[type=search] { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; }
+          honky-catalog .honky-cards { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+          honky-catalog .honky-card { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+          honky-catalog .honky-card[hidden] { display: none; }
+          honky-catalog .honky-card h3 { margin: 6px 0 0; font-size: 1.05em; }
+          honky-catalog .honky-card p { margin: 0; }
+          honky-catalog .honky-meta { opacity: 0.7; font-size: 0.85em; }
+          honky-catalog .honky-card tonk-display { display: block; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 6px; }
+        </style>
+        <input type="search" placeholder="Search templates by name, category, author or feature" aria-label="Search templates">
+        <p data-empty hidden>No templates match.</p>
+        <ul class="honky-cards">
+          <li class="honky-card" subject={this} data-search="{name} {summary} {category} {author} {features} {description}">
+            <tonk-display entity={preview} model=tonk:blob></tonk-display>
+            <h3>{name}</h3>
+            <p class="honky-meta">{category} · v{version} · by {author}</p>
+            <p>{summary}</p>
+            <p><a href={page} target="_blank" rel="noopener">Details</a></p>
+          </li>
+        </ul>
+      </honky-catalog>
