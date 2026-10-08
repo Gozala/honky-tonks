@@ -37,7 +37,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run registry
+      # A merge to main exists to publish: without the secret it fails
+      # rather than passing green with nothing published.
+      - name: Require the invite on main
+        if: env.HAS_INVITE != 'true' && github.event_name != 'pull_request'
+        run: |
+          echo "::error::TONK_REGISTRY_INVITE is not set, so the registry cannot be published. Add it under Settings → Secrets and variables → Actions → Repository secrets."
+          exit 1
       - name: Publish to the registry space
+        id: publish
         if: env.HAS_INVITE == 'true'
         uses: Gozala/tonk-publish-action@main
         with:
@@ -67,3 +75,21 @@ jobs:
           tonk space new registry
           tonk eval "$GITHUB_WORKSPACE"/generated/registry/*.yaml --quiet
           tonk query honky/listed --json | jq -e "length == $(ls -d "$GITHUB_WORKSPACE"/templates/*/ | wc -l)"
+      - name: Summary
+        if: always()
+        env:
+          EVENT: ${{ github.event_name }}
+          CHANGED: ${{ steps.publish.outputs.changed }}
+          PUSHED: ${{ steps.publish.outputs.pushed }}
+        run: |
+          if [ "$HAS_INVITE" != true ]; then
+            outcome="Not published: no TONK_REGISTRY_INVITE secret. The registry was checked against a scratch space on the runner."
+            echo "::warning::$outcome"
+          elif [ "$EVENT" = pull_request ]; then
+            outcome="Not published: pull requests evaluate against the registry space without committing. Merging to main publishes."
+          elif [ "$PUSHED" = true ]; then
+            outcome="Published commit $GITHUB_SHA to the registry space."
+          else
+            outcome="Nothing pushed (changed: ${CHANGED:-unknown})."
+          fi
+          echo "$outcome" >>"$GITHUB_STEP_SUMMARY"

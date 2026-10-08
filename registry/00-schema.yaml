@@ -98,6 +98,12 @@ attribute!: &honky-revision
   as: text
   cardinality: one
 
+attribute!: &honky-commit
+  description: "Git commit of the honky-tonks repository the catalog was last published from"
+  the: xyz.honkytonks.catalog/commit
+  as: text
+  cardinality: one
+
 # Only the rule below writes this, so only listed templates carry it.
 # Concepts match by shape, so without an attribute of its own
 # `honky/listed` would match every stored template, current or not.
@@ -127,9 +133,10 @@ concept!: &honky/template
     revision: honky-revision
 
 concept!: &honky/catalog
-  description: "The Honky Tonks catalog: which revision of it is current"
+  description: "The Honky Tonks catalog: which revision of it is current, and the commit that published it"
   with:
     revision: honky-revision
+    commit: honky-commit
 
 concept!: &honky/listed
   description: "A template the current catalog revision lists"
