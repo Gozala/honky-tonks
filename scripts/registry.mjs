@@ -45,7 +45,7 @@ export function registryDocument(templates, site) {
       'honky/template!:',
       `  this: id:honky-tonks/template/${r.slug}`,
       ...fields,
-      `  preview: !include/blob ../../templates/${r.slug}/${r.preview}`,
+      `  preview: !include/asset ../../templates/${r.slug}/${r.preview}`,
       `  revision: ${quote(revision)}`,
     ].join('\n');
   });

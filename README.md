@@ -51,7 +51,7 @@ For a domain root, omit BASE_PATH. Upload the contents of `dist/client/` to any 
 The catalog is also published into a Tonk space as data, so agents and views can query it there. `.github/workflows/registry.yml` runs `npm run registry`, which writes three notation documents to `generated/registry/`:
 
 - `00-schema.yaml`, copied from `registry/`: the `honky/template` and `honky/catalog` concepts, the derived `honky/listed` concept, and the views, including a search box over the template cards;
-- `10-templates.yaml`, generated from every `template.yaml`: one `honky/template` per template, with its first image stored as a blob (`!include/blob`), and the `honky/catalog` record;
+- `10-templates.yaml`, generated from every `template.yaml`: one `honky/template` per template, with its first image stored as an asset (`!include/asset`), and the `honky/catalog` record;
 - `90-home.yaml`, copied from `registry/`: puts the searchable catalog on the space's home.
 
 Pull requests evaluate them without committing. A merge to `main` publishes them with [tonk-publish-action](https://github.com/Gozala/tonk-publish-action), as one commit. Set the `TONK_REGISTRY_INVITE` secret to an agent connection link for the registry space ("connect agent" in Tonk). Without the secret, the workflow still evaluates the documents against a scratch space on the runner.

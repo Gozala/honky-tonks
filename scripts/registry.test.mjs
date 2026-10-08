@@ -13,7 +13,7 @@ test('every catalog template is asserted under one revision, with the catalog re
   assert.match(revision, /^[a-f0-9]{16}$/);
   for (const t of templates) {
     assert.ok(text.includes(`  this: id:honky-tonks/template/${t.slug}\n`), t.slug);
-    assert.ok(text.includes(`  preview: !include/blob ../../templates/${t.slug}/${t.images[0].file}\n`), t.slug);
+    assert.ok(text.includes(`  preview: !include/asset ../../templates/${t.slug}/${t.images[0].file}\n`), t.slug);
   }
   assert.equal(text.split('honky/template!:').length - 1, templates.length);
   assert.equal(text.split(`  revision: "${revision}"`).length - 1, templates.length + 1);
