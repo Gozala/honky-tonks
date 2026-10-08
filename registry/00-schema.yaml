@@ -538,10 +538,28 @@ rule!:
         path: ?path
 
 # Reading: what the current catalog lists
+#
+# A concept matches every entity that carries all of its attributes, so a
+# derived concept made only of stored attributes would match an entry that
+# is no longer a member too. Each one therefore has an attribute only its
+# rule writes: the catalog that currently lists it.
+
+attribute!: &catalog-listing/catalog
+  description: "The catalog that currently lists this entry; only the listing rule writes it"
+  the: tonk.catalog.listing/catalog
+  as: entity
+  cardinality: one
+
+attribute!: &catalog-listed-file/catalog
+  description: "The catalog that currently lists this file's entry; only the listed-file rule writes it"
+  the: tonk.catalog.listed-file/catalog
+  as: entity
+  cardinality: one
 
 concept!: &catalog/listing
   description: "An entry its catalog currently lists, with its info: what readers query"
   with:
+    catalog: catalog-listing/catalog
     slug: catalog-entry/slug
     name: catalog-entry/name
     summary: catalog-entry/summary
@@ -562,6 +580,7 @@ rule!:
   when:
     - assert: catalog/members
       where:
+        this: ?catalog
         entry: ?this
     - assert: catalog/entry
       where:
@@ -586,6 +605,7 @@ rule!:
 concept!: &catalog/listed-file
   description: "A current file of a listed entry, with its info: what an installer reads"
   with:
+    catalog: catalog-listed-file/catalog
     slug: catalog-file/slug
     path: catalog-file/path
     description: catalog-file/description
@@ -598,6 +618,7 @@ rule!:
   when:
     - assert: catalog/members
       where:
+        this: ?catalog
         entry: ?entry
     - assert: catalog-entry/files
       where:
