@@ -217,7 +217,7 @@ view!:
     label: "{name}"
     ui: |
       <article class="honky-detail">
-        <tonk-display entity={preview} model=tonk:blob></tonk-display>
+        <tonk-display entity={preview} model=tonk:asset></tonk-display>
         <h1>{name}</h1>
         <p class="honky-meta">{category} · v{version} · {license} · by {author}</p>
         <p>{summary}</p>
@@ -245,7 +245,7 @@ view!:
         <p data-empty hidden>No templates match.</p>
         <ul class="honky-cards">
           <li class="honky-card" subject={this} data-search="{name} {summary} {category} {author} {features} {description}">
-            <tonk-display entity={preview} model=tonk:blob></tonk-display>
+            <tonk-display entity={preview} model=tonk:asset></tonk-display>
             <h3>{name}</h3>
             <p class="honky-meta">{category} · v{version} · by {author}</p>
             <p>{summary}</p>

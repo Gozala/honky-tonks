@@ -14,6 +14,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  # The tonk CLI to publish with: `latest`, `staging`, or a release tag.
+  # Registry documents use multi-file `eval` and `!include/asset`.
+  TONK_VERSION: latest
 # One publish at a time, and never cancel one mid-push; a newer merge waits
 # its turn and then publishes on top.
 concurrency:
@@ -40,6 +44,7 @@ jobs:
           directory: generated/registry
           dry-run: ${{ github.event_name == 'pull_request' }}
           agent-name: Honky Tonks registry
+          tonk-version: ${{ env.TONK_VERSION }}
       # Forks and repositories without the secret still learn whether the
       # registry evaluates, against a scratch space on the runner.
       - name: Evaluate against a scratch space
@@ -48,6 +53,11 @@ jobs:
           XDG_DATA_HOME: ${{ runner.temp }}/tonk-data
           TONK_INSTALL_DIR: ${{ runner.temp }}/tonk-bin
         run: |
+          case "$TONK_VERSION" in
+            latest) ;;
+            staging) export TONK_CHANNEL=staging ;;
+            *) export TONK_RELEASE="$TONK_VERSION" ;;
+          esac
           curl -fsSL https://github.com/tonk-labs/tonk/releases/latest/download/install.sh | sh
           export PATH="$TONK_INSTALL_DIR:$PATH"
           mkdir -p "$RUNNER_TEMP/space" && cd "$RUNNER_TEMP/space"
