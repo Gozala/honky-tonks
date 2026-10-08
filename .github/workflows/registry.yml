@@ -16,8 +16,9 @@ permissions:
   contents: read
 env:
   # The tonk CLI to publish with: `latest`, `staging`, or a release tag.
-  # Registry documents use multi-file `eval` and `!include/asset`.
-  TONK_VERSION: latest
+  # Registry documents use multi-file `eval` and `!include/asset`; this is a
+  # pinned build that has them, until a tonk release does.
+  TONK_VERSION: tonk-kdp1zi8hiz1j
 # One publish at a time, and never cancel one mid-push; a newer merge waits
 # its turn and then publishes on top.
 concurrency:
