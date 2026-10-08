@@ -4,7 +4,7 @@ name: Publish registry
 # searchable catalog on the space's home. Pull requests evaluate the same
 # documents without committing; a merge to main publishes them.
 #
-# Needs a TONK_REGISTRY_INVITE secret: an agent connection link for the
+# Needs a TONK_INVITE secret: an agent connection link for the
 # registry space ("connect agent" in Tonk). Without it, the evaluation
 # against a scratch local space still runs.
 on:
@@ -28,7 +28,7 @@ jobs:
   registry:
     runs-on: ubuntu-latest
     env:
-      HAS_INVITE: ${{ secrets.TONK_REGISTRY_INVITE != '' }}
+      HAS_INVITE: ${{ secrets.TONK_INVITE != '' }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
@@ -42,14 +42,14 @@ jobs:
       - name: Require the invite on main
         if: env.HAS_INVITE != 'true' && github.event_name != 'pull_request'
         run: |
-          echo "::error::TONK_REGISTRY_INVITE is not set, so the registry cannot be published. Add it under Settings → Secrets and variables → Actions → Repository secrets."
+          echo "::error::TONK_INVITE is not set, so the registry cannot be published. Add it under Settings → Secrets and variables → Actions → Repository secrets."
           exit 1
       - name: Publish to the registry space
         id: publish
         if: env.HAS_INVITE == 'true'
         uses: Gozala/tonk-publish-action@main
         with:
-          invite: ${{ secrets.TONK_REGISTRY_INVITE }}
+          invite: ${{ secrets.TONK_INVITE }}
           directory: generated/registry
           dry-run: ${{ github.event_name == 'pull_request' }}
           agent-name: Honky Tonks registry
@@ -83,7 +83,7 @@ jobs:
           PUSHED: ${{ steps.publish.outputs.pushed }}
         run: |
           if [ "$HAS_INVITE" != true ]; then
-            outcome="Not published: no TONK_REGISTRY_INVITE secret. The registry was checked against a scratch space on the runner."
+            outcome="Not published: no TONK_INVITE secret. The registry was checked against a scratch space on the runner."
             echo "::warning::$outcome"
           elif [ "$EVENT" = pull_request ]; then
             outcome="Not published: pull requests evaluate against the registry space without committing. Merging to main publishes."
