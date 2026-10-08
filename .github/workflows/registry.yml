@@ -60,7 +60,9 @@ jobs:
             *) export TONK_RELEASE="$TONK_VERSION" ;;
           esac
           curl -fsSL https://github.com/tonk-labs/tonk/releases/latest/download/install.sh | sh
-          export PATH="$TONK_INSTALL_DIR:$PATH"
+          # tonk's Linux build names a /nix/store ELF interpreter the runner
+          # lacks; start it through the system loader, as the action does.
+          tonk() { /lib64/ld-linux-x86-64.so.2 "$TONK_INSTALL_DIR/tonk" "$@"; }
           mkdir -p "$RUNNER_TEMP/space" && cd "$RUNNER_TEMP/space"
           tonk space new registry
           tonk eval "$GITHUB_WORKSPACE"/generated/registry/*.yaml --quiet
