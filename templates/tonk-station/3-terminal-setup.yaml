@@ -80,7 +80,7 @@ terminal/setup!:
     
     ## Distributing YAML or cloning a space
     
-    Include the terminal/setup and terminal/setup-file schemas and records plus the terminal components. Strip session-relay-url, session-relay-room and session-relay-token VALUES from reusable template exports. The embedded package itself is credential-free. Tonk cloning does not provide this package with a clone event, so it cannot automatically invalidate inherited credentials; for a full state clone the setup agent must establish ownership and use fresh pairing. The terminal shows setup instructions when any connection setting is absent, and diagnostic instructions when configured but disconnected.
+    Include the terminal/setup and terminal/setup-file schemas and records plus the terminal custom elements. Strip session-relay-url, session-relay-room and session-relay-token VALUES from reusable template exports. The embedded package itself is credential-free. Tonk cloning does not provide this package with a clone event, so it cannot automatically invalidate inherited credentials; for a full state clone the setup agent must establish ownership and use fresh pairing. The terminal shows setup instructions when any connection setting is absent, and diagnostic instructions when configured but disconnected.
     
     ## References
     
@@ -229,7 +229,7 @@ terminal/setup-file!:
     
     ## Distributing YAML or cloning a space
     
-    Include the terminal/setup and terminal/setup-file schemas and records plus the terminal components. Strip session-relay-url, session-relay-room and session-relay-token VALUES from reusable template exports. The embedded package itself is credential-free. Tonk cloning does not provide this package with a clone event, so it cannot automatically invalidate inherited credentials; for a full state clone the setup agent must establish ownership and use fresh pairing. The terminal shows setup instructions when any connection setting is absent, and diagnostic instructions when configured but disconnected.
+    Include the terminal/setup and terminal/setup-file schemas and records plus the terminal custom elements. Strip session-relay-url, session-relay-room and session-relay-token VALUES from reusable template exports. The embedded package itself is credential-free. Tonk cloning does not provide this package with a clone event, so it cannot automatically invalidate inherited credentials; for a full state clone the setup agent must establish ownership and use fresh pairing. The terminal shows setup instructions when any connection setting is absent, and diagnostic instructions when configured but disconnected.
     
     ## References
     

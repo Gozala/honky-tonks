@@ -6,9 +6,9 @@ Use **Make your own copy** at the top of Nightsky and give your agent the Tonk i
 
 Include the demo's **Share invite** if the agent has not joined; the copied scope and workspace IDs alone grant no access. No separate ZIP or custom copy program is required. The agent resolves the current `nightsky-remix-guide-main` name and follows that one guide's tested source recipe. It uses a fresh working folder and normally reuses your account, asks together for any missing song/visual/shared-listening choices, and creates your own space. Native facts, code and media can still fetch on demand after pull. Editing a joined reference replica would change that shared space.
 
-The guide explains current named components, transient commands, authored rules and the required view compilation order. The agent copies only your chosen native media, verifies ownership and hosting, tests the result, and returns your new Share invite. Only the new blank space's home is set to Nightsky. Source membership, relay credentials, unrequested comments and meaningful existing homes stay untouched. An intentionally returned Tonk invitation is allowed; relay and account credentials remain private.
+The guide explains current named elements, transient commands, authored rules and the required view compilation order. The agent copies only your chosen native media, verifies ownership and hosting, tests the result, and returns your new Share invite. Only the new blank space's home is set to Nightsky. Source membership, relay credentials, unrequested comments and meaningful existing homes stay untouched. An intentionally returned Tonk invitation is allowed; relay and account credentials remain private.
 
-For deeper work, the optional `nightsky-agent-file` bundle contains exact audio-module inputs, component editing tools and relay setup files. The native guide explains how the agent can read them into its working folder. This is optional development tooling, not a prerequisite for making a remix.
+For deeper work, the optional `nightsky-agent-file` bundle contains exact audio-module inputs, element editing tools and relay setup files. The native guide explains how the agent can read them into its working folder. This is optional development tooling, not a prerequisite for making a remix.
 
 **Change a song through the agent.** First query `nightsky-track` and `nightsky-active-track` in the intended space. For a new recording, upload the exact audio and artwork files with `tonk --space YOUR_SPACE blob add FILE --type MIME`, verify their SHA256 values, inspect `show nightsky-song-add`, and submit a small native command with a fresh entity and request UUID. Its fields are `workspace`, `request`, `title`, `artist`, `album`, `year`, `duration` (whole seconds rounded up), `audio`, `cover`, `audio-sha256` and `cover-sha256`. Supply a verified small cover if the user has none. Reuse the command entity/UUID only when retrying the same pending addition. A new recording creates and selects a new track; earlier tracks and their comments remain intact.
 
@@ -21,26 +21,26 @@ Use `nightsky-song-select` with `workspace` and `selected` to open an existing c
 | Play button and its ripple | `nightsky-deck` and `nightsky-canvas` |
 | Timeline appearance | `nightsky-scrubber`; keep one chosen appearance |
 | Composer, feed or timed comment cards | `nightsky-marks`, `nightsky-dialogue`, `nightsky-moments` |
-| Frequency bands, rhythm, quiet texture or recurring patterns | `tools/examples/`; rebuild the `nightsky-kit` module block |
+| Frequency bands, rhythm, quiet texture or recurring patterns | `tools/examples/`; rebuild the generated block of the `nightsky-kit` element |
 | A new visual driven by audio or presence | `Nightsky.room(element)` and the events below |
 | Playback scheduling or networking | `nightsky-player` or `nightsky-live` |
 | Shared listening server | Your scoped `nightsky-relay` row; [Cloudflare setup](cloudflare-relay/README.md) |
 
-Tonk holds the editable component source, schema, commands and views. This guide and the files in `tools/` also travel with it as the current `nightsky-agent-file` bundle. The catalog's `core.yaml` is an install source for a fresh space; it is not needed to edit the source already in a joined space.
+Tonk holds the editable element source, schema, commands and views. This guide and the files in `tools/` also travel with it as the current `nightsky-agent-file` bundle. The catalog's `core.yaml` is an install source for a fresh space; it is not needed to edit the source already in a joined space.
 
-## Edit one component
+## Edit one element
 
 From this folder, with Node installed:
 
 ```sh
-node tools/component.mjs export --space YOUR_SPACE --name nightsky-sky --out edits/sky
+node tools/element.mjs export --space YOUR_SPACE --name nightsky-sky --out edits/sky
 # Edit edits/sky.js. Keep edits/sky.snapshot.json unchanged.
 node --check edits/sky.js
-node tools/component.mjs plan --space YOUR_SPACE --snapshot edits/sky.snapshot.json --source edits/sky.js --out edits/sky-change.notation
+node tools/element.mjs plan --space YOUR_SPACE --snapshot edits/sky.snapshot.json --source edits/sky.js --out edits/sky-change.notation
 npx --yes @tonk/cli@0.6.14 --space YOUR_SPACE eval edits/sky-change.notation --dry-run
 ```
 
-Inspect the diff and require one matching original component. Evaluate the same file when ready, reload the room, then export again and compare the installed source. The helper reads the name binding and component with the CLI and guards both the name and exact original module. If someone changed it, re-export and merge. It never publishes by itself. A stale plan makes zero changes; CLI 0.6.14 may report this as an unbound `previous` variable.
+An element is published under its tag (`id:nightsky-sky`), and its source is one `define` method: a `() => …` factory that returns the element class. Keep it that way; the runtime registers the tag itself. Inspect the diff and require one matching original element. Evaluate the same file when ready, reload the room, then export again and compare the installed source. The helper reads the tag's name binding, `define` method and description with the CLI and guards both the name and the exact original source. The plan re-derives the element with its current description, which moves the tag to the new definition; the previous definition stays on the branch, unnamed and no longer loaded. If someone changed it, re-export and merge. It never publishes by itself. A stale plan makes zero changes; the CLI reports this as an unbound `description` variable.
 
 For schema or view edits, inspect `npx --yes @tonk/cli@0.6.14 --space YOUR_SPACE show CONCEPT` and author a small notation change. Keep `xyz.nightsky.*` attributes and namespaced command fields; do not edit lowered event bindings or compiled rules. Repeated YAML heads are intentional. Reimporting the original template is installation, not a source merge, and can restore bundled defaults.
 

@@ -1,4 +1,4 @@
-// Deterministic build-time inclusion. Tonk receives a self-contained component.
+// Deterministic build-time inclusion. Tonk receives a self-contained element factory.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,9 +39,9 @@ export function buildKit(kit, modules, additions = {}) {
   // Notation canonicalizes blank lines. Match it so cleanup recognizes the installed kit.
   // Preserve other indentation: blindly indenting source changes its template literals.
   const block = `${BEGIN}\n  // Sources: ${sources.map(([name]) => name).join(', ')} — SHA-256 ${hash}\n  // Regenerate with examples/build-audio-modules.mjs; do not hand-edit this block.\n  (() => {\n${body.split('\n').map(line => line.trim() ? line : '').join('\n')}\n    globalThis.Nightsky.Modules = Object.freeze({ version: 1, ${spectralVersion ? `spectralVersion: '${spectralVersion}', ` : ''}${exports.join(', ')} });\n  })();\n${END}\n`;
-  const anchor = "  customElements.get('nightsky-kit')";
+  const anchor = "  document.dispatchEvent(new CustomEvent('nightsky-kit-ready'));";
   const position = kit.indexOf(anchor);
-  if (position < 0 || kit.indexOf(anchor, position + anchor.length) >= 0) throw new Error('Expected one Song Kit registration anchor.');
+  if (position < 0 || kit.indexOf(anchor, position + anchor.length) >= 0) throw new Error('Expected one Song Kit ready anchor.');
   return kit.slice(0, position) + block + kit.slice(position);
 }
 
@@ -51,7 +51,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (paths.length !== 2 || paths[0] === paths[1]) throw new Error('Usage: node tools/examples/build-audio-modules.mjs EXPORTED-KIT.js OUTPUT-KIT.js [--check]');
   const [input, output] = paths;
   const kit = fs.readFileSync(input, 'utf8');
-  if (!kit.includes('globalThis.Nightsky') || /(?:globalThis|window|view)\.Song\b/.test(kit)) throw new Error('Expected an exported, namespaced nightsky-kit component.');
+  if (!kit.includes('globalThis.Nightsky') || /(?:globalThis|window|view)\.Song\b/.test(kit)) throw new Error('Expected an exported, namespaced nightsky-kit element.');
   const modules = fs.readFileSync(new URL('./audio-modules.mjs', import.meta.url), 'utf8');
   const additions = {};
   for (const name of ['frequency-bands', 'spectral-motifs', 'spectral-timeline', 'spectral-sidecar', 'orbital-motion', 'constellation-graph']) additions[`examples/${name}.mjs`] = fs.readFileSync(new URL(`./${name}.mjs`, import.meta.url), 'utf8');

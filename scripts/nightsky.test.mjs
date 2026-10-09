@@ -4,9 +4,20 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile(new URL('../templates/nightsky/core.yaml', import.meta.url), 'utf8');
+const blocks = source.split(/(?=^[a-z][a-z0-9./+!-]*!:\s*)/m);
+
+test('custom elements are tag-named define factories, with no component loader', () => {
+  const elements = blocks.filter(block => block.startsWith('element!:'));
+  assert.equal(elements.length, 14);
+  for (const block of elements) {
+    assert.match(block, /^element!: &nightsky-[a-z-]+\n  description: "[^"\n]+"\n  method:\n    define: \|\n/);
+    assert.ok(!/customElements\.(?:get|define)\(/.test(block), 'the runtime registers the tag');
+  }
+  assert.ok(!/component!:|model="component"|<tonk-component/.test(source));
+});
 
 test('workspace views query existing selections without requiring an active track', () => {
-  const view = source.split(/(?=^[a-z][a-z0-9./+!-]*!:\s*)/m).find(block => block.startsWith('view!:\n  this: nightsky\n'));
+  const view = blocks.find(block => block.startsWith('view!:\n  this: nightsky\n'));
   const selections = [...view.matchAll(/<tonk-display\b[^>]*model="nightsky-active-track"[^>]*>/g)];
   assert.equal(selections.length, 4, 'room and song editor query selections in both views');
   for (const [display] of selections) {
@@ -38,7 +49,12 @@ test('workspace room handles empty, selected, switched and cleared tracks indepe
     observe() { this.connected = true; }
     disconnect() { this.connected = false; }
   }
-  const classes = source.slice(source.indexOf('      class ActiveRoom extends HTMLElement'), source.indexOf('      class SharedListeningSetup extends HTMLElement'));
+  // Each tag is its own element; read each class out of its tag's define factory.
+  const classOf = (tag, name) => {
+    const block = blocks.find(text => text.startsWith(`element!: &${tag}\n`));
+    return block.slice(block.indexOf(`  class ${name} extends HTMLElement`), block.indexOf(`  return ${name};\n`));
+  };
+  const classes = classOf('nightsky-active-room', 'ActiveRoom') + classOf('nightsky-workspace-room', 'WorkspaceRoom');
   const { ActiveRoom, WorkspaceRoom } = vm.runInNewContext(`${classes}\n({ ActiveRoom, WorkspaceRoom })`, {
     HTMLElement: Element, MutationObserver: Observer,
     validEntity: value => typeof value === 'string' && value.startsWith('id:'),
