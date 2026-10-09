@@ -1,0 +1,21 @@
+# Puts the catalog on the registry space's home: the same statements
+# `tonk eval --home catalog/listing` writes. Re-publishing it changes nothing.
+
+concept!: &space-home
+  this: space:home
+  description: "The space home page, keyed by the repository's own subject DID."
+  with:
+    subject:
+      description: "The repository's subject DID."
+      the: dialog.replica/subject
+      as: entity
+
+view!:
+  this: space:home
+  show:
+    ui: |
+      <tonk-display model=catalog/listing />
+
+name!:
+  this: id:tonk/space
+  entity: space:home

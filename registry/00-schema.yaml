@@ -1,0 +1,732 @@
+# The Honky Tonks catalog as Tonk data.
+#
+# CI evaluates this file, then the generated publish document
+# (scripts/registry.mjs), into the registry space on every merge to main.
+# The publish document says what the catalog is now, as transient
+# commands; the inductive rules below reconcile the stored catalog with it
+# at commit:
+#
+#   catalog/release        names the catalog and the commit published;
+#   catalog/publish        one per template, carrying its whole entry;
+#   catalog/publish-feature one per feature of a template;
+#   catalog/publish-file   one per notation file of a template.
+#
+# What a publish lists is asserted; what the stored catalog holds that a
+# publish no longer lists (a member, a feature, a file) is retracted;
+# everything else stays as it is, so a publish that changes nothing writes
+# nothing but the commit.
+#
+# Identities carry no `this:`: a catalog derives from its origin, an entry
+# from its slug, a file from its entry's slug and path. The publish
+# document asserts them directly, since a rule cannot mint an entity; re-
+# asserting one is a no-op. A rule also cannot see an entity another rule
+# created in the same commit, which is the other reason they are asserted.
+#
+# An entry that drops out of the catalog keeps its facts but stops being a
+# member; `catalog/listing` and `catalog/listed-file` follow members only.
+#
+# Required files install in path order: tonk-station's 1-schema.yaml
+# before 2-rules.yaml. Number a template's files if order matters.
+
+# Stored catalog
+
+attribute!: &catalog/origin
+  description: "Repository the catalog is generated from; the catalog's identity derives from it"
+  the: tonk.catalog/origin
+  as: text
+  cardinality: one
+
+attribute!: &catalog/commit
+  description: "Commit of the origin repository the catalog was last published from"
+  the: tonk.catalog/commit
+  as: text
+  cardinality: one
+
+attribute!: &catalog/member
+  description: "An entry the catalog currently lists"
+  the: tonk.catalog/member
+  as: entity
+  cardinality: many
+
+attribute!: &catalog-entry/slug
+  description: "Stable identifier of an entry, its folder name in the origin repository; the entry's identity derives from it"
+  the: tonk.catalog.entry/slug
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/name
+  description: "Display name of the template"
+  the: tonk.catalog.entry/name
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/summary
+  description: "One or two sentences about the template"
+  the: tonk.catalog.entry/summary
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/description
+  description: "Full plain-text description of the template"
+  the: tonk.catalog.entry/description
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/category
+  description: "Gallery category, such as Writing or Workspace"
+  the: tonk.catalog.entry/category
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/version
+  description: "Template version, x.y.z"
+  the: tonk.catalog.entry/version
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/license
+  description: "License identifier the template is published under"
+  the: tonk.catalog.entry/license
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/author
+  description: "Public name of the template's author"
+  the: tonk.catalog.entry/author
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/entrypoint
+  description: "Concept to open once the template is installed"
+  the: tonk.catalog.entry/entrypoint
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/compatibility
+  description: "Tonk versions the author tested the template with"
+  the: tonk.catalog.entry/compatibility
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/page
+  description: "The template's page in the public gallery"
+  the: tonk.catalog.entry/page
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/source
+  description: "The template's folder in the origin repository"
+  the: tonk.catalog.entry/source
+  as: text
+  cardinality: one
+
+attribute!: &catalog-entry/preview
+  description: "The template's first gallery image, an asset"
+  the: tonk.catalog.entry/preview
+  as: entity
+  cardinality: one
+
+attribute!: &catalog-entry/feature
+  description: "One feature of the template"
+  the: tonk.catalog.entry/feature
+  as: text
+  cardinality: many
+
+attribute!: &catalog-entry/file
+  description: "A notation file the template currently ships"
+  the: tonk.catalog.entry/file
+  as: entity
+  cardinality: many
+
+attribute!: &catalog-file/slug
+  description: "Slug of the entry a file belongs to; with the path, the file's identity derives from it"
+  the: tonk.catalog.file/slug
+  as: text
+  cardinality: one
+
+attribute!: &catalog-file/path
+  description: "Path of the file within its template folder. Required files install in path order."
+  the: tonk.catalog.file/path
+  as: text
+  cardinality: one
+
+attribute!: &catalog-file/description
+  description: "What the file contains, and when to install it"
+  the: tonk.catalog.file/description
+  as: text
+  cardinality: one
+
+attribute!: &catalog-file/optional
+  description: "Whether installing the template can skip this file"
+  the: tonk.catalog.file/optional
+  as: boolean
+  cardinality: one
+
+attribute!: &catalog-file/content
+  description: "The file's notation source, stored as an asset rather than evaluated: installing the template evaluates it, into the installer's space"
+  the: tonk.catalog.file/content
+  as: entity
+  cardinality: one
+
+concept!: &catalog
+  description: "A template catalog, identified by the repository it is generated from"
+  with:
+    origin: catalog/origin
+
+concept!: &catalog/released
+  description: "The commit a catalog was last published from"
+  with:
+    commit: catalog/commit
+
+concept!: &catalog/members
+  description: "The entries a catalog currently lists"
+  with:
+    entry: catalog/member
+
+concept!: &catalog/entry
+  description: "A catalog entry, identified by its slug"
+  with:
+    slug: catalog-entry/slug
+
+concept!: &catalog-entry/info
+  description: "What an entry says about its template"
+  with:
+    name: catalog-entry/name
+    summary: catalog-entry/summary
+    description: catalog-entry/description
+    category: catalog-entry/category
+    version: catalog-entry/version
+    license: catalog-entry/license
+    author: catalog-entry/author
+    entrypoint: catalog-entry/entrypoint
+    compatibility: catalog-entry/compatibility
+    page: catalog-entry/page
+    source: catalog-entry/source
+    preview: catalog-entry/preview
+
+concept!: &catalog-entry/features
+  description: "An entry's features"
+  with:
+    feature: catalog-entry/feature
+
+concept!: &catalog-entry/files
+  description: "The notation files an entry currently ships"
+  with:
+    file: catalog-entry/file
+
+concept!: &catalog/file
+  description: "A notation file of a template, identified by its entry's slug and its path"
+  with:
+    slug: catalog-file/slug
+    path: catalog-file/path
+
+concept!: &catalog-file/info
+  description: "What a file is, and its content"
+  with:
+    description: catalog-file/description
+    optional: catalog-file/optional
+    content: catalog-file/content
+
+# Publishing: transient commands, swept before the durable commit
+
+command!: &catalog/release
+  description: "This publish is the catalog from this origin, at this commit"
+  with:
+
+    origin:
+      description: "The catalog's origin"
+      the: tonk.catalog.release/origin
+      as: text
+
+    commit:
+      description: "The commit published"
+      the: tonk.catalog.release/commit
+      as: text
+
+
+command!: &catalog/publish
+  description: "This publish lists this template, with its whole entry"
+  with:
+
+    origin:
+      description: "The catalog's origin"
+      the: tonk.catalog.publish/origin
+      as: text
+
+    slug:
+      description: "The entry's slug"
+      the: tonk.catalog.publish/slug
+      as: text
+
+    name:
+      description: "Display name of the template"
+      the: tonk.catalog.publish/name
+      as: text
+
+    summary:
+      description: "One or two sentences about the template"
+      the: tonk.catalog.publish/summary
+      as: text
+
+    description:
+      description: "Full plain-text description of the template"
+      the: tonk.catalog.publish/description
+      as: text
+
+    category:
+      description: "Gallery category, such as Writing or Workspace"
+      the: tonk.catalog.publish/category
+      as: text
+
+    version:
+      description: "Template version, x.y.z"
+      the: tonk.catalog.publish/version
+      as: text
+
+    license:
+      description: "License identifier the template is published under"
+      the: tonk.catalog.publish/license
+      as: text
+
+    author:
+      description: "Public name of the template's author"
+      the: tonk.catalog.publish/author
+      as: text
+
+    entrypoint:
+      description: "Concept to open once the template is installed"
+      the: tonk.catalog.publish/entrypoint
+      as: text
+
+    compatibility:
+      description: "Tonk versions the author tested the template with"
+      the: tonk.catalog.publish/compatibility
+      as: text
+
+    page:
+      description: "The template's page in the public gallery"
+      the: tonk.catalog.publish/page
+      as: text
+
+    source:
+      description: "The template's folder in the origin repository"
+      the: tonk.catalog.publish/source
+      as: text
+
+    preview:
+      description: "The template's first gallery image, an asset"
+      the: tonk.catalog.publish/preview
+      as: entity
+
+
+command!: &catalog/publish-feature
+  description: "This publish gives the template this feature"
+  with:
+
+    slug:
+      description: "The entry's slug"
+      the: tonk.catalog.publish-feature/slug
+      as: text
+
+    feature:
+      description: "One feature"
+      the: tonk.catalog.publish-feature/feature
+      as: text
+
+
+command!: &catalog/publish-file
+  description: "This publish ships this notation file with the template"
+  with:
+
+    slug:
+      description: "The entry's slug"
+      the: tonk.catalog.publish-file/slug
+      as: text
+
+    path:
+      description: "The file's path"
+      the: tonk.catalog.publish-file/path
+      as: text
+
+    description:
+      description: "What the file contains, and when to install it"
+      the: tonk.catalog.publish-file/description
+      as: text
+
+    optional:
+      description: "Whether installing the template can skip this file"
+      the: tonk.catalog.publish-file/optional
+      as: boolean
+
+    content:
+      description: "The file's notation source, stored as an asset rather than evaluated: installing the template evaluates it, into the installer's space"
+      the: tonk.catalog.publish-file/content
+      as: entity
+
+
+rule!:
+  description: "A release records the commit the catalog was published from."
+  assert!: catalog/released
+  when:
+    - assert: catalog/release
+      where:
+        origin: ?origin
+        commit: ?commit
+    - assert: catalog
+      where:
+        this: ?this
+        origin: ?origin
+
+rule!:
+  description: "A published template's entry is a member of its catalog."
+  assert!: catalog/members
+  when:
+    - assert: catalog/publish
+      where:
+        origin: ?origin
+        slug: ?slug
+    - assert: catalog
+      where:
+        this: ?this
+        origin: ?origin
+    - assert: catalog/entry
+      where:
+        this: ?entry
+        slug: ?slug
+
+rule!:
+  description: "A member the release no longer publishes leaves the catalog."
+  retract!: catalog/members
+  when:
+    - assert: catalog/release
+      where:
+        origin: ?origin
+    - assert: catalog
+      where:
+        this: ?this
+        origin: ?origin
+    - assert: catalog/members
+      where:
+        this: ?this
+        entry: ?entry
+    - assert: catalog/entry
+      where:
+        this: ?entry
+        slug: ?slug
+  unless:
+    - assert: catalog/publish
+      where:
+        origin: ?origin
+        slug: ?slug
+
+rule!:
+  description: "A published template's entry carries what the publish says about it."
+  assert!: catalog-entry/info
+  when:
+    - assert: catalog/publish
+      where:
+        slug: ?slug
+        name: ?name
+        summary: ?summary
+        description: ?description
+        category: ?category
+        version: ?version
+        license: ?license
+        author: ?author
+        entrypoint: ?entrypoint
+        compatibility: ?compatibility
+        page: ?page
+        source: ?source
+        preview: ?preview
+    - assert: catalog/entry
+      where:
+        this: ?this
+        slug: ?slug
+
+rule!:
+  description: "A published feature is stored on its entry."
+  assert!: catalog-entry/features
+  when:
+    - assert: catalog/publish-feature
+      where:
+        slug: ?slug
+        feature: ?feature
+    - assert: catalog/entry
+      where:
+        this: ?this
+        slug: ?slug
+
+rule!:
+  description: "A stored feature the publish no longer lists is retracted."
+  retract!: catalog-entry/features
+  when:
+    - assert: catalog/publish
+      where:
+        slug: ?slug
+    - assert: catalog/entry
+      where:
+        this: ?this
+        slug: ?slug
+    - assert: catalog-entry/features
+      where:
+        this: ?this
+        feature: ?feature
+  unless:
+    - assert: catalog/publish-feature
+      where:
+        slug: ?slug
+        feature: ?feature
+
+rule!:
+  description: "A published file belongs to its entry."
+  assert!: catalog-entry/files
+  when:
+    - assert: catalog/publish-file
+      where:
+        slug: ?slug
+        path: ?path
+    - assert: catalog/entry
+      where:
+        this: ?this
+        slug: ?slug
+    - assert: catalog/file
+      where:
+        this: ?file
+        slug: ?slug
+        path: ?path
+
+rule!:
+  description: "A published file carries what the publish says about it."
+  assert!: catalog-file/info
+  when:
+    - assert: catalog/publish-file
+      where:
+        slug: ?slug
+        path: ?path
+        description: ?description
+        optional: ?optional
+        content: ?content
+    - assert: catalog/file
+      where:
+        this: ?this
+        slug: ?slug
+        path: ?path
+
+rule!:
+  description: "A stored file the publish no longer ships leaves its entry."
+  retract!: catalog-entry/files
+  when:
+    - assert: catalog/publish
+      where:
+        slug: ?slug
+    - assert: catalog/entry
+      where:
+        this: ?this
+        slug: ?slug
+    - assert: catalog-entry/files
+      where:
+        this: ?this
+        file: ?file
+    - assert: catalog/file
+      where:
+        this: ?file
+        path: ?path
+  unless:
+    - assert: catalog/publish-file
+      where:
+        slug: ?slug
+        path: ?path
+
+# Reading: what the current catalog lists
+#
+# A concept matches every entity that carries all of its attributes, so a
+# derived concept made only of stored attributes would match an entry that
+# is no longer a member too. Each one therefore has an attribute only its
+# rule writes: the catalog that currently lists it.
+
+attribute!: &catalog-listing/catalog
+  description: "The catalog that currently lists this entry; only the listing rule writes it"
+  the: tonk.catalog.listing/catalog
+  as: entity
+  cardinality: one
+
+attribute!: &catalog-listed-file/catalog
+  description: "The catalog that currently lists this file's entry; only the listed-file rule writes it"
+  the: tonk.catalog.listed-file/catalog
+  as: entity
+  cardinality: one
+
+concept!: &catalog/listing
+  description: "An entry its catalog currently lists, with its info: what readers query"
+  with:
+    catalog: catalog-listing/catalog
+    slug: catalog-entry/slug
+    name: catalog-entry/name
+    summary: catalog-entry/summary
+    description: catalog-entry/description
+    category: catalog-entry/category
+    version: catalog-entry/version
+    license: catalog-entry/license
+    author: catalog-entry/author
+    entrypoint: catalog-entry/entrypoint
+    compatibility: catalog-entry/compatibility
+    page: catalog-entry/page
+    source: catalog-entry/source
+    preview: catalog-entry/preview
+
+rule!:
+  description: "A catalog lists each of its members."
+  assert: catalog/listing
+  when:
+    - assert: catalog/members
+      where:
+        this: ?catalog
+        entry: ?this
+    - assert: catalog/entry
+      where:
+        this: ?this
+        slug: ?slug
+    - assert: catalog-entry/info
+      where:
+        this: ?this
+        name: ?name
+        summary: ?summary
+        description: ?description
+        category: ?category
+        version: ?version
+        license: ?license
+        author: ?author
+        entrypoint: ?entrypoint
+        compatibility: ?compatibility
+        page: ?page
+        source: ?source
+        preview: ?preview
+
+concept!: &catalog/listed-file
+  description: "A current file of a listed entry, with its info: what an installer reads"
+  with:
+    catalog: catalog-listed-file/catalog
+    slug: catalog-file/slug
+    path: catalog-file/path
+    description: catalog-file/description
+    optional: catalog-file/optional
+    content: catalog-file/content
+
+rule!:
+  description: "A listed entry's current files are listed with it."
+  assert: catalog/listed-file
+  when:
+    - assert: catalog/members
+      where:
+        this: ?catalog
+        entry: ?entry
+    - assert: catalog-entry/files
+      where:
+        this: ?entry
+        file: ?this
+    - assert: catalog/file
+      where:
+        this: ?this
+        slug: ?slug
+        path: ?path
+    - assert: catalog-file/info
+      where:
+        this: ?this
+        description: ?description
+        optional: ?optional
+        content: ?content
+
+# Filters the cards rendered inside it as the reader types. The cards are
+# ordinary view output, so the filter only hides and shows them; it never
+# reads the store. A re-render (a new publish landing while the page is
+# open) is filtered again through the observer.
+element!: &catalog-browser
+  description: "Search box over the template cards rendered inside it"
+  method:
+    connected: |
+      (self) => {
+        const input = self.querySelector('input[type=search]');
+        const empty = self.querySelector('[data-empty]');
+        const apply = () => {
+          const words = (input?.value ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+          let shown = 0;
+          for (const card of self.querySelectorAll('[data-search]')) {
+            const haystack = card.dataset.search.toLowerCase();
+            const match = words.every(word => haystack.includes(word));
+            card.hidden = !match;
+            if (match) shown++;
+          }
+          if (empty) empty.hidden = shown > 0;
+        };
+        self.__apply = apply;
+        input?.addEventListener('input', apply);
+        self.__observer = new MutationObserver(apply);
+        self.__observer.observe(self, { childList: true, subtree: true });
+        apply();
+      }
+    disconnected: |
+      (self) => {
+        self.__observer?.disconnect();
+      }
+
+view!:
+  this: catalog/listing
+  show:
+    title: "{name}"
+    label: "{name}"
+    ui: |
+      <article class="catalog-detail">
+        <tonk-display entity={preview} model=tonk:asset></tonk-display>
+        <h1>{name}</h1>
+        <p class="catalog-meta">{category} · v{version} · {license} · by {author}</p>
+        <p>{summary}</p>
+        <p class="catalog-description">{description}</p>
+        <h2>Install</h2>
+        <p>Open it from Discover in Tonk, or read the gallery page. Entry point: <code>{entrypoint}</code>. Tested with: {compatibility}</p>
+        <p>Its features and notation files are in this space: <code>catalog-entry/features</code> and <code>catalog/listed-file</code> for <code>{slug}</code>.</p>
+        <p><a href={page} target="_blank" rel="noopener">Gallery page</a> · <a href={source} target="_blank" rel="noopener">Source</a></p>
+      </article>
+    directory: |
+      <catalog-browser>
+        <style>
+          catalog-browser { display: block; padding: 16px; font: inherit; }
+          catalog-browser input[type=search] { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; }
+          catalog-browser .catalog-cards { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+          catalog-browser .catalog-card { border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+          catalog-browser .catalog-card[hidden] { display: none; }
+          catalog-browser .catalog-card h3 { margin: 6px 0 0; font-size: 1.05em; }
+          catalog-browser .catalog-card p { margin: 0; }
+          catalog-browser .catalog-meta { opacity: 0.7; font-size: 0.85em; }
+          catalog-browser .catalog-card tonk-display { display: block; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 6px; }
+        </style>
+        <input type="search" placeholder="Search templates by name, category, author or description" aria-label="Search templates">
+        <p data-empty hidden>No templates match.</p>
+        <ul class="catalog-cards">
+          <li class="catalog-card" subject={this} data-search="{name} {summary} {category} {author} {description}">
+            <tonk-display entity={preview} model=tonk:asset></tonk-display>
+            <h3>{name}</h3>
+            <p class="catalog-meta">{category} · v{version} · by {author}</p>
+            <p>{summary}</p>
+            <p><a href={page} target="_blank" rel="noopener">Details</a></p>
+          </li>
+        </ul>
+      </catalog-browser>
+
+view!:
+  this: catalog/listed-file
+  show:
+    title: "{slug}/{path}"
+    label: "{path}"
+    ui: |
+      <article class="catalog-file">
+        <h1>{slug}/{path}</h1>
+        <p>{description}</p>
+        <tonk-display entity={content} model=tonk:asset></tonk-display>
+      </article>
+    directory: |
+      <ul class="catalog-files">
+        <li subject={this}>
+          <strong>{slug}/{path}</strong>: {description}
+          <tonk-display entity={content} model=tonk:asset></tonk-display>
+        </li>
+      </ul>

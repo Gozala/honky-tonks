@@ -46,6 +46,23 @@ For a domain root, omit BASE_PATH. Upload the contents of `dist/client/` to any 
 
 `site.config.json` holds the public repository, branch, and Pages URL. Update it when transferring the project. The GitHub workflow derives the base path from the repository name. The build normalizes Vinext's nested export into a portable static artifact. `.openai/hosting.json` connects the optional Sites deployment and does not affect GitHub Pages.
 
+## Registry space
+
+The catalog is also published into a Tonk space as data, so agents and views can query it there. `.github/workflows/registry.yml` runs `npm run registry`, which writes three notation documents to `generated/registry/`:
+
+- `00-schema.yaml`, copied from `registry/`: the catalog's concepts, the publish commands, the rules that reconcile the stored catalog with a publish, the `catalog/listing` and `catalog/listed-file` concepts readers query, and the views, including a search box over the template cards;
+- `10-catalog.yaml`, generated from every `template.yaml`: the publish document. It asserts each identity (the catalog by its origin, an entry by its slug, a file by its entry's slug and path) and says what the catalog is now with transient commands: `catalog/release`, then per template `catalog/publish` with its whole entry, `catalog/publish-feature` per feature and `catalog/publish-file` per notation file. Images and notation files are stored as assets (`!include/asset`), never evaluated;
+- `90-home.yaml`, copied from `registry/`: puts the searchable catalog on the space's home.
+
+Pull requests evaluate them without committing. A merge to `main` publishes them with [tonk-publish-action](https://github.com/Gozala/tonk-publish-action), as one commit. Set the `TONK_INVITE` secret to an agent connection link for the registry space ("connect agent" in Tonk). Without the secret, the workflow still evaluates the documents against a scratch space on the runner.
+
+The schema's inductive rules fire at commit: what a publish lists is asserted, and a member, feature or file the stored catalog holds but the publish no longer lists is retracted. Everything else stays as it is, so a publish that changes no template writes only the new commit. Required notation files install in path order, so a template whose files depend on each other numbers them. Query the current catalog with:
+
+```sh
+tonk --space SPACE query catalog/listing --json
+tonk --space SPACE query catalog/listed-file --json
+```
+
 ## Agent contract
 
 `catalog.json` (schemaVersion 1) includes all metadata, ordered `files`, `optional` flags, SHA-256 and byte length, direct source links, and `entrypoint`. Paths are relative to the serving origin, including the configured base path. `llms.txt` describes discovery and evaluation. Each YAML also has a .txt companion for easy inline reading.
@@ -62,6 +79,8 @@ app/                     gallery, details, agents, contribution pages
 scripts/catalog.mjs      manifest and file validation
 scripts/prepare.mjs      generated catalog and static source copies
 scripts/check-output.mjs exported HTML, local link and checksum checks
+scripts/registry.mjs     registry documents for the Tonk space
+registry/                hand-written registry schema, views and home
 generated/               ignored build-time data
 public/content/          ignored generated source copies
 .github/workflows/       PR checks and Pages deployment

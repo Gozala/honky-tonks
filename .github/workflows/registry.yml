@@ -1,0 +1,95 @@
+name: Publish registry
+# Publishes the template catalog into the registry Tonk space as data:
+# every template, a `catalog/listing` view of the current ones, and a
+# searchable catalog on the space's home. Pull requests evaluate the same
+# documents without committing; a merge to main publishes them.
+#
+# Needs a TONK_INVITE secret: an agent connection link for the
+# registry space ("connect agent" in Tonk). Without it, the evaluation
+# against a scratch local space still runs.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  # The tonk CLI to publish with: `latest`, `staging`, or a release tag.
+  # Registry documents use multi-file `eval` and `!include/asset`; this is a
+  # pinned build that has them, until a tonk release does.
+  TONK_VERSION: tonk-kdp1zi8hiz1j
+# One publish at a time, and never cancel one mid-push; a newer merge waits
+# its turn and then publishes on top.
+concurrency:
+  group: registry-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    env:
+      HAS_INVITE: ${{ secrets.TONK_INVITE != '' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run registry
+      # A merge to main exists to publish: without the secret it fails
+      # rather than passing green with nothing published.
+      - name: Require the invite on main
+        if: env.HAS_INVITE != 'true' && github.event_name != 'pull_request'
+        run: |
+          echo "::error::TONK_INVITE is not set, so the registry cannot be published. Add it under Settings → Secrets and variables → Actions → Repository secrets."
+          exit 1
+      - name: Publish to the registry space
+        id: publish
+        if: env.HAS_INVITE == 'true'
+        uses: Gozala/tonk-publish-action@main
+        with:
+          invite: ${{ secrets.TONK_INVITE }}
+          directory: generated/registry
+          dry-run: ${{ github.event_name == 'pull_request' }}
+          agent-name: Honky Tonks registry
+          tonk-version: ${{ env.TONK_VERSION }}
+      # Forks and repositories without the secret still learn whether the
+      # registry evaluates, against a scratch space on the runner.
+      - name: Evaluate against a scratch space
+        if: env.HAS_INVITE != 'true'
+        env:
+          XDG_DATA_HOME: ${{ runner.temp }}/tonk-data
+          TONK_INSTALL_DIR: ${{ runner.temp }}/tonk-bin
+        run: |
+          case "$TONK_VERSION" in
+            latest) ;;
+            staging) export TONK_CHANNEL=staging ;;
+            *) export TONK_RELEASE="$TONK_VERSION" ;;
+          esac
+          curl -fsSL https://github.com/tonk-labs/tonk/releases/latest/download/install.sh | sh
+          # tonk's Linux build names a /nix/store ELF interpreter the runner
+          # lacks; start it through the system loader, as the action does.
+          tonk() { /lib64/ld-linux-x86-64.so.2 "$TONK_INSTALL_DIR/tonk" "$@"; }
+          mkdir -p "$RUNNER_TEMP/space" && cd "$RUNNER_TEMP/space"
+          tonk space new registry
+          tonk eval "$GITHUB_WORKSPACE"/generated/registry/*.yaml --quiet
+          tonk query catalog/members --json | jq -e "length == $(ls -d "$GITHUB_WORKSPACE"/templates/*/ | wc -l)"
+      - name: Summary
+        if: always()
+        env:
+          EVENT: ${{ github.event_name }}
+          CHANGED: ${{ steps.publish.outputs.changed }}
+          PUSHED: ${{ steps.publish.outputs.pushed }}
+        run: |
+          if [ "$HAS_INVITE" != true ]; then
+            outcome="Not published: no TONK_INVITE secret. The registry was checked against a scratch space on the runner."
+            echo "::warning::$outcome"
+          elif [ "$EVENT" = pull_request ]; then
+            outcome="Not published: pull requests evaluate against the registry space without committing. Merging to main publishes."
+          elif [ "$PUSHED" = true ]; then
+            outcome="Published commit $GITHUB_SHA to the registry space."
+          else
+            outcome="Nothing pushed (changed: ${CHANGED:-unknown})."
+          fi
+          echo "$outcome" >>"$GITHUB_STEP_SUMMARY"
