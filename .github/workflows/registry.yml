@@ -29,6 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_INVITE: ${{ secrets.TONK_INVITE != '' }}
+      # The deployment the registry space lives on. tonk only joins through
+      # an invite whose signed home address is this origin's /ucan/ route,
+      # so a link cannot point the publisher at a server of its choosing.
+      TONK_CONNECTION_ORIGIN: https://tonk.foundation
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
