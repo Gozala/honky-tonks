@@ -16,9 +16,10 @@ permissions:
   contents: read
 env:
   # The tonk CLI to publish with: `latest`, `staging`, or a release tag.
-  # Registry documents use multi-file `eval` and `!include/asset`; this is a
-  # pinned build that has them, until a tonk release does.
-  TONK_VERSION: tonk-kdp1zi8hiz1j
+  # `tonk-dev` is the rolling build of tonk's main. The registry space is
+  # read by the deployed app, which runs main, so the publisher has to
+  # write the same data format: a pinned or tagged build falls behind it.
+  TONK_VERSION: tonk-dev
 # One publish at a time, and never cancel one mid-push; a newer merge waits
 # its turn and then publishes on top.
 concurrency:
@@ -68,9 +69,14 @@ jobs:
             *) export TONK_RELEASE="$TONK_VERSION" ;;
           esac
           curl -fsSL https://github.com/tonk-labs/tonk/releases/latest/download/install.sh | sh
-          # tonk's Linux build names a /nix/store ELF interpreter the runner
-          # lacks; start it through the system loader, as the action does.
-          tonk() { /lib64/ld-linux-x86-64.so.2 "$TONK_INSTALL_DIR/tonk" "$@"; }
+          # Builds from before tonk's static Linux CLI name a /nix/store ELF
+          # interpreter the runner lacks; start those through the system
+          # loader, as the action does. A static build runs as it is.
+          if "$TONK_INSTALL_DIR/tonk" --version >/dev/null 2>&1; then
+            tonk() { "$TONK_INSTALL_DIR/tonk" "$@"; }
+          else
+            tonk() { /lib64/ld-linux-x86-64.so.2 "$TONK_INSTALL_DIR/tonk" "$@"; }
+          fi
           mkdir -p "$RUNNER_TEMP/space" && cd "$RUNNER_TEMP/space"
           tonk space new registry
           tonk eval "$GITHUB_WORKSPACE"/generated/registry/*.yaml --quiet
